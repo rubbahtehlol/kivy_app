@@ -1,0 +1,110 @@
+#:kivy 2.3.0
+
+WindowManager:
+    MainScreen:
+    NewRecpScreen:
+    ViewRecpScreen:
+    CreBasketScreen:
+    ViewBasketScreen:
+
+<MainScreen>
+    name: "main"
+
+    # new_receipt: new_receipt
+    # view_receipt: view_receipts
+    # create_basket: create_basket
+    # view_baskets: view_baskets
+
+    GridLayout:
+        cols:1
+        size: root.width, root.height
+
+        GridLayout:
+            cols:1
+
+            Label:
+                text: "Welcome to the Receipt Scanner App"
+                font_size: 24
+                bold: True
+                size_hint: (0.2, 0.2)
+                pos_hint: {"top": 1}
+
+            Label:
+                text: "Please select an option below"
+                font_size: 18
+                bold: True
+                size_hint: (0.2, 0.2)
+                pos_hint: {"top": 1}
+
+            AnchorLayout:
+                GridLayout:
+                    cols:1
+                    # size: root.width/2, root.height/2
+                    spacing: 10
+                    size_hint: (0.65, 0.7)
+                    pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+                    Button:
+                        # id: new_receipt
+                        text: "Scan Receipt"
+                        on_release:
+                            app.root.current = "new_receipt"
+                            root.manager.transition.direction = "left"
+
+                    Button:
+                        # id: view_receipts
+                        text: "View Receipts"
+                        on_release:
+                            app.root.current = "view_receipts"
+                            root.manager.transition.direction = "left"
+
+                    Button:
+                        # id: create_basket
+                        text: "Create Basket"
+                        on_release:
+                            app.root.current = "create_basket"
+                            root.manager.transition.direction = "left"
+
+                    Button:
+                        # id: view_baskets
+                        text: "View Baskets"
+                        on_release:
+                            app.root.current = "view_baskets"
+                            root.manager.transition.direction = "left"
+
+<NewRecpScreen>
+    name: "new_receipt"
+
+    Button:
+        text: "Back"
+        on_release:
+            app.root.current = "main"
+            root.manager.transition.direction = "right"
+        
+
+<ViewRecpScreen>
+    name: "view_receipts"
+
+    Button:
+        text: "Back"
+        on_release:
+            app.root.current = "main"
+            root.manager.transition.direction = "right"
+
+<CreBasketScreen>
+    name: "create_basket"
+
+    Button:
+        text: "Back"
+        on_release:
+            app.root.current = "main"
+            root.manager.transition.direction = "right"
+
+<ViewBasketScreen>
+    name: "view_baskets"
+
+    Button:
+        text: "Back"
+        on_release:
+            app.root.current = "main"
+            root.manager.transition.direction = "right"
