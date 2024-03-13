@@ -1,45 +1,32 @@
-# Create MongoDB Collection
-from pymongo import MongoClient
-client = MongoClient('localhost', 27017)
-db = client['NewDatabase']
-col = db['student']
-print("Collection created sucessfully")
+from pymongo import MongoClient, errors
+from datetime import datetime, timedelta
 
+class DatabaseOperations:
+    def __init__(self, uri='mongodb://localhost:27017/', db_name='receiptsys'):
+        try:
+            self.client = MongoClient(uri, serverSelectionTimeoutMS=3000)
+            self.db = self.client[db_name]
+            print("Connected to MongoDB:", self.client.server_info()["version"])
+        except errors.ServerSelectionTimeoutError as err:
+            print("Failed to connect to MongoDB:", err)
+            self.db = None
 
-docs = [{'name': 'David', 'age': 20},
-        {'name': 'Alice', 'age': 25},
-        {'name': 'Tyler', 'age': 23}]
-result = col.insert_many(docs)
-print(result.inserted_ids)
+    def login_user(self, username, password):
+        user = self.db['user_profiles'].find_one({"user_id": username})
+        return user if user and user.get("password") == password else None
 
+    def create_user_profile(self, user_id, favorite_categories, price_sensitivity, password):
+        profile = {
+            "user_id": user_id,
+            "password": password,  # Remember to hash in a real app
+            "preferences": {
+                "favorite_categories": favorite_categories,
+                "price_sensitivity": price_sensitivity
+            },
+            "purchase_history": []
+        }
+        return self.db['user_profiles'].insert_one(profile).inserted_id
 
-# Read MongoDB Collection
-print("Read MongoDB Collection")
-cursor = col.find({})
-for record in cursor:
-    print(record)
-
-# Update MongoDB Collection     
-print("Update MongoDB Collection")
-col.update_one({'name': 'David'}, {'$set': {'age': 21}})
-cursor = col.find({})
-for record in cursor:
-    print(record)
-
-# # Delete MongoDB Collection
-# print("Delete MongoDB Collection")
-# col.delete_one({'name': 'David'})
-# cursor = col.find({})
-# for record in cursor:
-#     print(record)
-
-# # Drop MongoDB Collection
-# print("Drop MongoDB Collection")
-# col.drop()
-# cursor = col.find({})
-# for record in cursor:
-#     print(record)
-
-# # Drop MongoDB Database
-# print("Drop MongoDB Database")
-# client.drop_database('NewDatabase')
+    def find_lowest_prices_for_basket(self, basket_items):
+        # Your existing logic here
+        pass
