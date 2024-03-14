@@ -139,18 +139,45 @@ WindowManager:
                 app.root.current = "main"
                 root.manager.transition.direction = "right"
 
-<ViewRecpScreen>:
-    name: "view_receipts"
+# <ViewRecpScreen>:
+#     name: "view_receipts"
+#     BoxLayout:
+#         orientation: "vertical"
+#         Label:
+#             id: purchase_history_label
+#             text: "Purchase history will be displayed here"
+#         Button:
+#             text: "Back"
+#             on_release:
+#                 app.root.current = "main"
+#                 root.manager.transition.direction = "right"
+<ReceiptItem@Label>:
+    text: ''
+
+# Define a dynamic class for the popup content
+<ReceiptPopupContent>:
+    orientation: 'vertical'
+    receipt_items: None  # This will hold the individual receipt item widgets
     BoxLayout:
-        orientation: "vertical"
-        Label:
-            id: purchase_history_label
-            text: "Purchase history will be displayed here"
+        size_hint_y: None
+        height: "40dp"
         Button:
-            text: "Back"
-            on_release:
-                app.root.current = "main"
-                root.manager.transition.direction = "right"
+            text: "Delete"
+            on_release: root.delete_receipt()
+
+
+<ViewRecpScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        RecycleView:
+            id: receipts_list
+            viewclass: 'Button'  # Use Button for each item for simplicity
+            RecycleBoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                default_size: None, dp(40)
+                default_size_hint: 1, None
 
 <CreBasketScreen>
     name: "create_basket"

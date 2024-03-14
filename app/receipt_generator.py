@@ -14,7 +14,7 @@ def generate_fictional_receipts(user_id, count=5):
         purchase_date = datetime.now() - timedelta(days=random.randint(1, 30))
 
         receipt = {
-            "user_id": user_id,  # Include the user_id with each receipt
+            "user_id": user_id,
             "items": items,
             "total_price": round(total_price, 2),
             "store": random.choice(stores),
