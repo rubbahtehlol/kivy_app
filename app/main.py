@@ -2,8 +2,10 @@ import kivy
 kivy.require('2.3.0')
 
 from kivy.app import App
+from kivy.uix.popup import Popup
+from kivy.uix.label import Label
 from kivy.uix.screenmanager import Screen, ScreenManager
-from kivy.properties import ObjectProperty
+from kivy.properties import ObjectProperty, StringProperty
 
 from pymongo import MongoClient, errors
 from datetime import datetime, timedelta
@@ -33,20 +35,6 @@ class LoginScreen(Screen):
             self.manager.current = 'main'  # Redirect to main screen after login
         else:
             print("Failed to log in. Incorrect username or password.")
-
-    def create_user_profile(self, user_id, favorite_categories, price_sensitivity, password):
-        profile = {
-            "user_id": user_id,
-            "password": password,  # Store the password (use hashing in a real app)
-            "preferences": {
-                "favorite_categories": favorite_categories.split(', '),
-                "price_sensitivity": price_sensitivity
-            },
-            "purchase_history": []
-        }
-        db['user_profiles'].insert_one(profile)
-        print("Profile created with login credentials")
-
 
 class MainScreen(Screen):
     pass
@@ -108,50 +96,76 @@ class ViewRecpScreen(Screen):
             print("User profile not found.")
 
 class CreBasketScreen(Screen):
-    def find_lowest_prices_for_basket(self, basket_items):
+    def find_lowest_prices_for_basket(self, basket_items, days_back=None):
         receipts = db['receipts']
-        
-        time_frames = [1, 7, 14, 30]
         results = {}
-
+        
         for item in basket_items:
             results[item] = {}
-            for days in time_frames:
-                start_date = datetime.now() - timedelta(days=days)
-                pipeline = [
-                    {"$match": {"items.name": item, "purchase_date": {"$gte": start_date}}},
-                    {"$unwind": "$items"},
-                    {"$match": {"items.name": item}},
-                    {"$group": {"_id": "$items.name", "lowest_price": {"$min": "$items.price"}}}
-                ]
-                lowest_price = list(receipts.aggregate(pipeline))
-                if lowest_price:
-                    results[item][f'{days} days'] = lowest_price[0]['lowest_price']
-                else:
-                    results[item][f'{days} days'] = "No data"
+            query = {"items.name": item}
+            if days_back is not None:
+                start_date = datetime.now() - timedelta(days=days_back)
+                query["purchase_date"] = {"$gte": start_date}
+
+
+            pipeline = [
+                {"$match": query},
+                {"$unwind": "$items"},
+                {"$match": {"items.name": item}},
+                {"$group": {"_id": "$items.name", "lowest_price": {"$min": "$items.price"}}}
+            ]
+            lowest_price = list(receipts.aggregate(pipeline))
+            if lowest_price:
+                # Assuming lowest_price contains at least one result
+                results[item] = lowest_price[0]['lowest_price']
+            else:
+                results[item] = "No data"
+
         return results
+
     
     def check_prices(self, selected_days, *args):
-        # Extract item names from args (which is a list containing another list)
-        basket_items = args[0] if args else []
+        # Define a list of valid values for comparison
+        valid_values = ['1 day', '7 days', '14 days', '30 days', 'All time']
 
-        # Convert selected_days to an integer
-        days_back = int(selected_days.split()[0])  # Extract the number of days from the string
+        # Check if the selected value is in the list of valid values
+        if selected_days not in valid_values:
+            popup = Popup(title='Invalid Selection',
+            content=Label(text='Please select a valid number of days.'),
+            size_hint=(None, None), size=(400, 200))
+            popup.open()
+            return
+
+        # Assuming selected_days and basket_items are passed correctly from the UI
+        basket_items = args[0] if args else []
+        days_back = None if selected_days == "All time" else int(selected_days.split()[0])
 
         if basket_items:
             prices = self.find_lowest_prices_for_basket(basket_items, days_back)
-            print(prices)  # Placeholder for demonstrating results in the console
+
+            # Proceed to display these prices on a new screen
+            display_text = '\n'.join([f"{item}: {price_info}" for item, price_info in prices.items()])
+            App.get_running_app().price_check_results = display_text
+
+            # Navigate to the PriceResultsScreen
+            self.manager.current = 'price_results'
         else:
-            print("No items in the basket to check.")  # Handle the case of an empty basket
+            print("No items in the basket to check.")
 
 class ViewBasketScreen(Screen):
     pass
+
+class PriceResultsScreen(Screen):
+    def on_enter(self, *args):
+        # Display the results
+        self.ids.results_label.text = App.get_running_app().price_check_results
 
 class WindowManager(ScreenManager):
     pass
 
 class MyBasketApp(App):
     current_user = None  # Global variable to keep track of the current user
+    price_check_results = StringProperty("")  # Property to hold the price check results
 
     def build(self):
         self.title = 'My Basket App'
@@ -163,6 +177,7 @@ class MyBasketApp(App):
         sm.add_widget(ViewRecpScreen(name='view_receipts'))
         sm.add_widget(CreBasketScreen(name='create_basket'))
         sm.add_widget(ViewBasketScreen(name='view_baskets'))
+        sm.add_widget(PriceResultsScreen(name='price_results'))
 
         # Decide on the initial screen
         initial_screen = 'login' if not self.check_user_session() else 'main'

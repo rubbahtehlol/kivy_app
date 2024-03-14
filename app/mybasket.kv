@@ -8,6 +8,7 @@ WindowManager:
     ViewRecpScreen:
     CreBasketScreen:
     ViewBasketScreen:
+    PriceResultsScreen:
 
 <LoginScreen>:
     name: "login"
@@ -159,7 +160,7 @@ WindowManager:
         Spinner:
             id: day_spinner
             text: 'Select Days'
-            values: ['1 day', '7 days', '14 days', '30 days']
+            values: ['1 day', '7 days', '14 days', '30 days', 'All time']
             size_hint: (1, 0.1)
 
         TextInput:
@@ -180,7 +181,7 @@ WindowManager:
 
         Button:
             text: "Check Prices"
-            on_release: root.check_prices([item1.text, item2.text, item3.text, item4.text, item5.text])
+            on_release: root.check_prices(day_spinner.text, [item1.text, item2.text, item3.text, item4.text, item5.text])
 
         Button:
             text: "Back"
@@ -196,3 +197,14 @@ WindowManager:
         on_release:
             app.root.current = "main"
             root.manager.transition.direction = "right"
+
+<PriceResultsScreen>:
+    name: "price_results"
+    BoxLayout:
+        orientation: "vertical"
+        Label:
+            id: results_label
+            text: ""
+        Button:
+            text: "Back"
+            on_release: app.root.current = "create_basket"

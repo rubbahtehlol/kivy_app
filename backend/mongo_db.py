@@ -28,5 +28,24 @@ class DatabaseOperations:
         return self.db['user_profiles'].insert_one(profile).inserted_id
 
     def find_lowest_prices_for_basket(self, basket_items):
-        # Your existing logic here
-        pass
+        receipts = self.db['receipts']
+        
+        time_frames = [1, 7, 14, 30]
+        results = {}
+
+        for item in basket_items:
+            results[item] = {}
+            for days in time_frames:
+                start_date = datetime.now() - timedelta(days=days)
+                pipeline = [
+                    {"$match": {"items.name": item, "purchase_date": {"$gte": start_date}}},
+                    {"$unwind": "$items"},
+                    {"$match": {"items.name": item}},
+                    {"$group": {"_id": "$items.name", "lowest_price": {"$min": "$items.price"}}}
+                ]
+                lowest_price = list(receipts.aggregate(pipeline))
+                if lowest_price:
+                    results[item][f'{days} days'] = lowest_price[0]['lowest_price']
+                else:
+                    results[item][f'{days} days'] = "No data"
+        return results
