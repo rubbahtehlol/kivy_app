@@ -9,6 +9,9 @@ from kivy.properties import ObjectProperty, StringProperty
 
 from pymongo import MongoClient, errors
 from datetime import datetime, timedelta
+import uuid
+
+from receipt_generator import generate_fictional_receipts
 
 # global variables for MongoDB host (default port is 27017)
 DOMAIN = 'localhost:'
@@ -26,15 +29,37 @@ except errors.ServerSelectionTimeoutError as err:
 
 class LoginScreen(Screen):
     def login(self, username, password):
-        user = db['user_profiles'].find_one({"user_id": username})
-        if user and user.get("password") == password:
-            # Assuming you have a way to keep track of the current user
-            global current_user
-            current_user = username
+        # Check if the username field is empty
+        if not username:
+            popup = Popup(title='Login Error',
+                          content=Label(text='Username cannot be empty.'),
+                          size_hint=(None, None), size=(400, 200))
+            popup.open()
+            return
+
+        # Attempt to find the user in the database
+        user = db['user_profiles'].find_one({"username": username})
+
+        # Check if the user does not exist
+        if not user:
+            popup = Popup(title='Login Error',
+                          content=Label(text='Username does not exist.'),
+                          size_hint=(None, None), size=(400, 200))
+            popup.open()
+            return
+
+        # Check if the password matches (assuming password checking logic is here)
+        if user.get("password") == password:
+            # Proceed with successful login logic...
             print(f"User {username} logged in successfully.")
-            self.manager.current = 'main'  # Redirect to main screen after login
+            App.get_running_app().current_user = username  # Set the current user
+            App.get_running_app().current_user_id = user["user_id"]  # Set the current user ID
+            self.manager.current = 'main'  # Navigate to the main screen
         else:
-            print("Failed to log in. Incorrect username or password.")
+            # Password does not match
+            popup = Popup(title='Login Error',
+                          content=Label(text='Incorrect password.'),
+                          size_hint=(None, None), size=(400, 200))
 
 class MainScreen(Screen):
     pass
@@ -42,27 +67,33 @@ class MainScreen(Screen):
 class NewUser(Screen):
     price_sensitivity = None  # Default value; adjust as needed
  
-    def create_user_profile(self, username, favorite_categories, password):
+    def create_user_profile(self, username, password, price_sensitivity):
         # This assumes that `self.price_sensitivity` holds the value from button selection
         price_sensitivity = self.price_sensitivity if hasattr(self, 'price_sensitivity') else 'Medium'  # Default to 'Medium' if not set
 
+        # Generate a unique user ID
+        user_id = str(uuid.uuid4())
+
         # Create or update the user profile with the provided information
         profile = {
-            "user_id": username,
+            "user_id": user_id,
+            "username": username,
             "password": password,  # Remember to hash passwords in a real application
             "preferences": {
-                "favorite_categories": favorite_categories.split(', '),  # Assuming categories are comma-separated
                 "price_sensitivity": price_sensitivity
             },
             "purchase_history": []
         }
 
         # Check if the user already exists to decide on create or update
-        existing_user = db['user_profiles'].find_one({"user_id": username})
+        existing_user = db['user_profiles'].find_one({"username": username})
         if existing_user:
-            # Update existing user profile
-            db['user_profiles'].update_one({"user_id": username}, {"$set": profile})
-            print("Updated user profile.")
+            popup_content = Label(text="User already exists. Please log in or use a different username.")
+            popup = Popup(title="User already exists",
+                          content=popup_content,
+                          size_hint=(None, None), size=(400, 200))
+            popup.open()
+            return
         else:
             # Insert new user profile
             db['user_profiles'].insert_one(profile)
@@ -81,6 +112,20 @@ class NewRecpScreen(Screen):
             {"user_id": user_id},
             {"$push": {"purchase_history": receipt_data}})
         print("Purchase added to history.")
+
+    def generate_and_insert_receipts(self, user_id):
+        if not user_id:
+            popup_content = Label(text="No user is currently logged in. Please log in to generate receipts.")
+            popup = Popup(title="User Not Logged In",
+                          content=popup_content,
+                          size_hint=(None, None), size=(400, 200))
+            popup.open()
+            return
+        
+        receipts = generate_fictional_receipts(user_id, 10)  # Generate 10 receipts
+        for receipt in receipts:
+            db['receipts'].insert_one(receipt)
+        print("Receipts generated and inserted into the database.")
 
 class ViewRecpScreen(Screen):
     def on_pre_enter(self, *args):
@@ -152,9 +197,6 @@ class CreBasketScreen(Screen):
         else:
             print("No items in the basket to check.")
 
-class ViewBasketScreen(Screen):
-    pass
-
 class PriceResultsScreen(Screen):
     def on_enter(self, *args):
         # Display the results
@@ -165,6 +207,7 @@ class WindowManager(ScreenManager):
 
 class MyBasketApp(App):
     current_user = None  # Global variable to keep track of the current user
+    current_user_id = None  # Global variable to keep track of the current user's ID
     price_check_results = StringProperty("")  # Property to hold the price check results
 
     def build(self):
@@ -176,7 +219,6 @@ class MyBasketApp(App):
         sm.add_widget(NewRecpScreen(name='new_receipt'))
         sm.add_widget(ViewRecpScreen(name='view_receipts'))
         sm.add_widget(CreBasketScreen(name='create_basket'))
-        sm.add_widget(ViewBasketScreen(name='view_baskets'))
         sm.add_widget(PriceResultsScreen(name='price_results'))
 
         # Decide on the initial screen
@@ -187,7 +229,9 @@ class MyBasketApp(App):
     def check_user_session(self):
         return True if self.current_user else False
 
-
+    def get_user_id(self):
+        """Getter method for the current user's ID."""
+        return self.current_user_id
     
 if __name__ == '__main__':
     MyBasketApp().run()

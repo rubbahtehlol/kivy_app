@@ -7,7 +7,6 @@ WindowManager:
     NewRecpScreen:
     ViewRecpScreen:
     CreBasketScreen:
-    ViewBasketScreen:
     PriceResultsScreen:
 
 <LoginScreen>:
@@ -40,9 +39,20 @@ WindowManager:
     name: "new_user"
     GridLayout:
         cols: 1
+        spacing: 10
+        padding: 10
+
         TextInput:
-            id: favorite_categories
-            hint_text: "Enter favorite categories"
+            id: username
+            hint_text: "Username"
+            multiline: False
+
+        TextInput:
+            id: password
+            hint_text: "Password"
+            password: True
+            multiline: False
+
         BoxLayout:
             size_hint_y: None
             height: '48dp'
@@ -57,19 +67,13 @@ WindowManager:
                 on_release: root.set_price_sensitivity('Low')
         Button:
             text: "Create Profile"
-            on_release: root.create_user_profile("user_id_here", favorite_categories.text, root.price_sensitivity)
+            on_release: root.create_user_profile(username.text, password.text, root.price_sensitivity)
         Button:
             text: "Back to Login"
             on_release: app.root.current = "login"
 
 <MainScreen>
     name: "main"
-
-    new_receipt: new_receipt
-    view_receipt: view_receipts
-    create_basket: create_basket
-    view_baskets: view_baskets
-
     GridLayout:
         cols:1
         size: root.width, root.height
@@ -120,21 +124,20 @@ WindowManager:
                             app.root.current = "create_basket"
                             root.manager.transition.direction = "left"
 
-                    Button:
-                        id: view_baskets
-                        text: "View Baskets"
-                        on_release:
-                            app.root.current = "view_baskets"
-                            root.manager.transition.direction = "left"
-
 <NewRecpScreen>
     name: "new_receipt"
-
-    Button:
-        text: "Back"
-        on_release:
-            app.root.current = "main"
-            root.manager.transition.direction = "right"
+    GridLayout:
+        cols: 1
+        spacing: 10
+        padding: 10
+        Button:
+            text: "Generate Receipts"
+            on_release: root.generate_and_insert_receipts(app.get_user_id())
+        Button:
+            text: "Back"
+            on_release:
+                app.root.current = "main"
+                root.manager.transition.direction = "right"
 
 <ViewRecpScreen>:
     name: "view_receipts"
@@ -188,15 +191,6 @@ WindowManager:
             on_release:
                 app.root.current = "main"
                 root.manager.transition.direction = "right"
-
-<ViewBasketScreen>
-    name: "view_baskets"
-
-    Button:
-        text: "Back"
-        on_release:
-            app.root.current = "main"
-            root.manager.transition.direction = "right"
 
 <PriceResultsScreen>:
     name: "price_results"
