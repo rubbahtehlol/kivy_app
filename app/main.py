@@ -128,44 +128,44 @@ class NewRecpScreen(Screen):
         print("Receipts generated and inserted into the database.")
 
 class ViewRecpScreen(Screen):
-    def on_pre_enter(self, *args):
-        # Assuming user_id is accessible as a global or passed around
-        user_id = self.current_user_id
-        receipts = self.get_user_receipts(user_id)
-        user_profile = db['user_profiles'].find_one({"user_id": user_id})
-        if user_profile:
-            self.ids.receipts_list.data  = [
-            {'text': f"Receipt {idx + 1}", 'on_release': lambda idx=idx: self.open_receipt_popup(receipts[idx])}
-            for idx in range(len(receipts))
-        ]
-        else:
-            print("User profile not found.")
-    
-    def open_receipt_popup(self, receipt):
-        # content = BoxLayout(orientation='vertical')
-        # for item in receipt['items']:
-        #     content.add_widget(Label(text=f"{item['name']}: ${item['price']}"))
-        # content.add_widget(Button(text="Delete", on_release=lambda x: self.delete_receipt(receipt)))
-        # popup = Popup(title='Receipt Details', content=content, size_hint=(None, None), size=(400, 400))
-        # popup.open()
+        # def on_pre_enter(self, *args):
+        #     # Assuming user_id is accessible as a global or passed around
+        #     user_id = self.get_user_id()
+        #     receipts = App.get_user_receipts(user_id)
+        #     user_profile = db['user_profiles'].find_one({"user_id": user_id})
+        #     if user_profile:
+        #         self.ids.receipts_list.data  = [
+        #         {'text': f"Receipt {idx + 1}", 'on_release': lambda idx=idx: self.open_receipt_popup(receipts[idx])}
+        #         for idx in range(len(receipts))
+        #     ]
+        #     else:
+        #         print("User profile not found.")
+        
+        def open_receipt_popup(self, receipt):
+            # content = BoxLayout(orientation='vertical')
+            # for item in receipt['items']:
+            #     content.add_widget(Label(text=f"{item['name']}: ${item['price']}"))
+            # content.add_widget(Button(text="Delete", on_release=lambda x: self.delete_receipt(receipt)))
+            # popup = Popup(title='Receipt Details', content=content, size_hint=(None, None), size=(400, 400))
+            # popup.open()
 
-        # Create and configure the popup content dynamically
-        content = self.manager.get_screen('your_dynamic_popup_screen_name')  # Adjust with your actual dynamic class/screen name
-        content.ids.receipt_items.clear_widgets()  # Clear previous items
-        for item in receipt['items']:
-            # Dynamically add items to the popup
-            content.ids.receipt_items.add_widget(ReceiptItem(text=f"{item['name']}: ${item['price']}"))
-        content.ids.delete_button.bind(on_release=lambda x: self.delete_receipt(receipt))  # Assuming 'delete_button' is an id in your KV
-        popup = Popup(title='Receipt Details', content=content, size_hint=(None, None), size=(400, 400))
-        popup.open()
+            # Create and configure the popup content dynamically
+            content = self.manager.get_screen('your_dynamic_popup_screen_name')  # Adjust with your actual dynamic class/screen name
+            content.ids.receipt_items.clear_widgets()  # Clear previous items
+            for item in receipt['items']:
+                # Dynamically add items to the popup
+                content.ids.receipt_items.add_widget(ReceiptItem(text=f"{item['name']}: ${item['price']}"))
+            content.ids.delete_button.bind(on_release=lambda x: self.delete_receipt(receipt))  # Assuming 'delete_button' is an id in your KV
+            popup = Popup(title='Receipt Details', content=content, size_hint=(None, None), size=(400, 400))
+            popup.open()
 
-    def delete_receipt(self, receipt):
-        # Assuming receipt is a dictionary with a unique ID
-        db['receipts'].delete_one({"receipt_id": receipt["receipt_id"]})
-        print("Receipt deleted.")
+        def delete_receipt(self, receipt):
+            # Assuming receipt is a dictionary with a unique ID
+            db['receipts'].delete_one({"receipt_id": receipt["receipt_id"]})
+            print("Receipt deleted.")
 
-        # Close the popup
-        self.on_pre_enter()  # Refresh the view
+            # Close the popup
+            self.on_pre_enter()  # Refresh the view
 
 class CreBasketScreen(Screen):
     def find_lowest_prices_for_basket(self, basket_items, days_back=None):
@@ -230,6 +230,9 @@ class PriceResultsScreen(Screen):
         self.ids.results_label.text = App.get_running_app().price_check_results
 
 class WindowManager(ScreenManager):
+    pass
+
+class ReceiptItem(Label):
     pass
 
 class MyBasketApp(App):
