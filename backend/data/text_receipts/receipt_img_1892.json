@@ -1,0 +1,67 @@
+{
+    "_id": "<ObjectId>",
+    "user_id": "unique_user_identifier",
+    "store": {
+      "name": "Coop Mega Moldeliveien",
+      "code": "Coop Mega"
+  },
+    "items": [
+      {
+        "receipt_id": "<ObjectId>",
+        "item_id": "<ObjectId>",
+        "name": "APP.JUICE FR.KJø",
+        "size": "1.0",
+        "unit": "liter",
+        "quantity": 1,
+        "price": 27.90,
+        "consumable": true,
+        "discount": false,
+        "discounted_price": false,
+        "price_original": false
+      },
+      {
+        "receipt_id": "<ObjectId>",
+        "item_id": "<ObjectId>",
+        "name": "COOP EGG FRITTG.",
+        "size": "10",
+        "unit": "PK",
+        "quantity": 1,
+        "price": 40.00,
+        "consumable": true,
+        "discount": 32.1,
+        "discounted_price": 18.90,
+        "price_original": 58.90
+      },
+      {
+        "receipt_id": "<ObjectId>",
+        "item_id": "<ObjectId>",
+        "name": "GOURMETSTYKKER",
+        "size": "438",
+        "unit": "gram",
+        "quantity": 2,
+        "price": 30.00,
+        "consumable": true,
+        "discount": 42.2,
+        "discounted_price": 43.80,
+        "price_original": 51.90
+      },
+      {
+        "receipt_id": "<ObjectId>",
+        "item_id": "<ObjectId>",
+        "name": "RØD PAPRIKA",
+        "size": "0.144",
+        "unit": "kg",
+        "quantity": 1,
+        "price": 8.63,
+        "consumable": true,
+        "discount": 14.3,
+        "discounted_price": 1.44,
+        "price_original": 10.07
+      }
+    ],
+    "total": 140.78,
+    "total_discount": 62.70,
+    "created_at": "27.10.2023 09:13",
+    "uploaded_at": "27.10.2023 09:23"
+  }
+  

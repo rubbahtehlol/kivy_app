@@ -3,7 +3,10 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
-img = cv2.imread('')
+def load_image(image_path):
+    return cv2.imread(image_path)
+
+# img = cv2.imread("backend/data/receipts/IMG_1885.png")
 
 #https://stackoverflow.com/questions/28816046/displaying-different-images-with-actual-size-in-matplotlib-subplot
 def display(im_path):
@@ -27,7 +30,7 @@ def display(im_path):
 
     plt.show()
 
-def getSkewAngle(cvImage) -> float:
+def get_skew_angle(cvImage) -> float:
     # Prep image, copy, convert to gray scale, blur, and threshold
     newImage = cvImage.copy()
     gray = cv2.cvtColor(newImage, cv2.COLOR_BGR2GRAY)
@@ -60,7 +63,7 @@ def getSkewAngle(cvImage) -> float:
     return -1.0 * angle
 
 # Rotate the image around its center
-def rotateImage(cvImage, angle: float):
+def rotate_image(cvImage, angle: float):
     newImage = cvImage.copy()
     (h, w) = newImage.shape[:2]
     center = (w // 2, h // 2)
@@ -96,6 +99,18 @@ def preprocess_for_ocr(img):
 
     return opening
 
-img_new = preprocess_for_ocr(img)
+# img_new = preprocess_for_ocr(img)
 
-cv2.imwrite('preprocessed_img.png', img_new)
+def save_image(name, img):
+    return cv2.imwrite(name, img)
+
+# cv2.imwrite('preprocessed_img.png', img_new)
+
+def get_text_from_image(img):
+    # Use Tesseract to convert the image to text
+    text = pytesseract.image_to_string(img, lang='nor')
+    return text
+
+def save_raw_text(text, name):
+    with open("backend/data/raw_text/" + name, "w") as file:
+        file.write(text)

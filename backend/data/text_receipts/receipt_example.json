@@ -1,0 +1,32 @@
+{
+    "_id": "<ObjectId>",
+    "user_id": "unique_user_identifier",
+    "store": {
+      "name": "Eurospar Molde",
+      "code": "Eurospar"
+  },
+    "items": [
+      {
+        "receipt_id": "<ObjectId>",
+        "item_id": "<ObjectId>",
+        "name": "LUNSJKAKER KALD ",
+        "quantity": 1,
+        "price": 29.80,
+        "consumable": true,
+        "discount": ""
+      },
+      {
+        "receipt_id": "<ObjectId>",
+        "item_id": "<ObjectId>",
+        "name": "SKRUF NO10 FRE SUPSLIM",
+        "quantity": 1,
+        "price": 87.90,
+        "consumable": false,
+        "discount": ""
+      }
+    ],
+    "total": 117.70,
+    "created_at": "07.11.23 10:35",
+    "uploaded_at": "07.11.23 10:45"
+  }
+  
