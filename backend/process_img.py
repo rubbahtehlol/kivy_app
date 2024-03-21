@@ -108,7 +108,7 @@ def save_image(name, img):
 
 def get_text_from_image(img):
     # Use Tesseract to convert the image to text
-    text = pytesseract.image_to_string(img, lang='nor')
+    text = pytesseract.image_to_string(img, lang='nor', config='--oem 1 --psm 6')
     return text
 
 def save_raw_text(text, name):
