@@ -9,7 +9,7 @@ import process_img as prim
 
 # print([(w.text, w.pos_) for w in doc])
 
-im_path = "backend/data/receipts/IMG_2144.JPG"
+im_path = "backend/data/receipts/IMG_2142.JPG"
 
 # get the image name and add "_processed" to it
 image_name = im_path.split("/")[-1]
