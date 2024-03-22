@@ -99,7 +99,7 @@ class NewUser(Screen):
             db['user_profiles'].insert_one(profile)
             print("Created new user profile.")
 
-        self.manager.current = 'main'  # Redirect to main screen after creating profile
+        self.manager.current = 'login'  # Redirect to main screen after creating profile
 
     def set_price_sensitivity(self, sensitivity):
         self.price_sensitivity = sensitivity
