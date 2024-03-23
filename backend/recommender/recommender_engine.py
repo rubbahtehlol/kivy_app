@@ -11,7 +11,7 @@ def fetch_stores_with_any_items(item_ids, user_location):
     :param user_location: User's current location as (latitude, longitude).
     :return: List of stores with details including total cost and distance.
     """
-    stores = db.stores.find({
+    stores = db['stores'].find({
         "items.groceryId": {"$in": item_ids}
     })
 
