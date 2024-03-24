@@ -101,6 +101,45 @@ def preprocess_for_ocr(img):
 
 # img_new = preprocess_for_ocr(img)
 
+def remove_borders(image):
+    contours, heiarchy = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cntsSorted = sorted(contours, key=lambda x:cv2.contourArea(x))
+    cnt = cntsSorted[-1]
+    x, y, w, h = cv2.boundingRect(cnt)
+    crop = image[y:y+h, x:x+w]
+    return (crop)
+
+def deskew_image(image):
+    # from PIL import Image
+    # Coordinates of non-black pixels.
+    non_zero_coords = np.column_stack(np.where(image > 0))
+
+    # Angles are in radians, but cv2.getRotationMatrix2D needs degrees.
+    # Here, compute the angle between each non-black pixel and the horizontal axis.
+    angles = np.arctan2(non_zero_coords[:, 0], non_zero_coords[:, 1])
+    print(angles)
+    rotation_angle = np.median(angles)
+    print(rotation_angle)
+
+    # Convert the median angle from radians to degrees and negate it to correct the rotation
+    rotation_angle_degrees = -np.rad2deg(rotation_angle)/100
+    print(rotation_angle_degrees)
+
+    # Rotate the image around its center
+    (h, w) = image.shape[:2]
+    center = (w // 2, h // 2)
+    M = cv2.getRotationMatrix2D(center, rotation_angle_degrees, 1.0)
+    rotated = cv2.warpAffine(image, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+
+    # Convert to PIL Image format to display in the notebook
+    # rotated_pil = Image.fromarray(rotated)
+
+    # Save the deskewed image
+    # deskewed_path = './temp/deskewed_receipt.png'
+    # rotated_pil.save(deskewed_path)
+
+    return rotated
+
 def save_image(name, img):
     return cv2.imwrite(name, img)
 

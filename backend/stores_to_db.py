@@ -709,4 +709,37 @@ store_22 ={
     }
 }
 
-stores.insert_many([store_1, store_2, store_3, store_4, store_5, store_6, store_7, store_8, store_9, store_10, store_11, store_12, store_13, store_14, store_15, store_16, store_17, store_18, store_19, store_20, store_21, store_22])
+store_23 ={
+    "_id": "0023",
+    "name": "BUNNPRIS & GOURMET FUGLSET",
+    "chain": "Bunnpris",
+    "location": {
+    "type": "Point",
+    "coordinates": [62.744558511287316, 7.198440666665252]
+    },
+    "address": {
+        "street": "Frænavegen 107, 6416 Molde",
+        "city": "Molde",
+        "state": "",
+        "zip": "6416",
+        "country": "Norway"
+    },
+    "items": [
+    
+    ],
+    "hours": {
+        "monday": "07:00-23:00",
+        "tuesday": "07:00-23:00",
+        "wednesday": "07:00-23:00",
+        "thursday": "07:00-23:00",
+        "friday": "07:00-23:00",
+        "saturday": "08:00-23:00",
+        "sunday": "10:00-23:00"
+    },
+    "contact": {
+        "phone": "71191700"
+    }
+}
+
+
+stores.insert_many([store_1, store_2, store_3, store_4, store_5, store_6, store_7, store_8, store_9, store_10, store_11, store_12, store_13, store_14, store_15, store_16, store_17, store_18, store_19, store_20, store_21, store_22, store_23])
