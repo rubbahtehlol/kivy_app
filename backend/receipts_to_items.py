@@ -32,8 +32,8 @@ for receipt in receipts:
         # Build the new or updated item document
         new_item = {
             "name": item_name,
-            "current_price": item['price'],
-            "original_price": item['price_original'],
+            # "current_price": item['price'],
+            # "original_price": item['price_original'],
             "size": item['size'],
             "unit": item['unit'],
             "price_history": [
