@@ -15,12 +15,11 @@ class DatabaseOperations:
         user = self.db['user_profiles'].find_one({"user_id": username})
         return user if user and user.get("password") == password else None
 
-    def create_user_profile(self, user_id, favorite_categories, price_sensitivity, password):
+    def create_user_profile(self, user_id, price_sensitivity, password):
         profile = {
             "user_id": user_id,
             "password": password,  # Remember to hash in a real app
             "preferences": {
-                "favorite_categories": favorite_categories,
                 "price_sensitivity": price_sensitivity
             },
             "purchase_history": []

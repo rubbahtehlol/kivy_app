@@ -1,3 +1,5 @@
+# export PYTHONPATH="${PYTHONPATH}:/home/peter/project_price/kivy_app"
+
 from backend.database.mongo_db import DatabaseOperations
 
 db = DatabaseOperations()
