@@ -153,7 +153,7 @@ receipt_2149 = {
 receipt_2150 = {
     "_id": "2150",
     "user_id": "user_2",
-    "created_at": "04.12.23 12:52",
+    "created_at": "04.12.2023 12:52",
     "uploaded_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
     "store": {
         "id": "0008",
@@ -178,7 +178,7 @@ receipt_2150 = {
 receipt_2151 = {
     "_id": "2151",
     "user_id": "user_3",
-    "created_at": "29.11.23 19:19",
+    "created_at": "29.11.2023 19:19",
     "uploaded_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
     "store": {
         "id": "0009",
@@ -466,7 +466,7 @@ receipt_2151 = {
 receipt_2152 = {
     "_id": "2152",
     "user_id": "user_1",
-    "created_at": "29.11.23 14:26",
+    "created_at": "29.11.2023 14:26",
     "uploaded_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
     "store": {
         "id": "0008",
@@ -534,7 +534,7 @@ receipt_2153 = {
 receipt_2154 = {
     "_id": "2154",
     "user_id": "user_3",
-    "created_at": "01 11.11.23 17:59",
+    "created_at": "11.11.2023 17:59",
     "uploaded_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
     "store": {
         "id": "0007",

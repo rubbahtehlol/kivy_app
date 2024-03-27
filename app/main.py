@@ -9,7 +9,6 @@ from kivy.properties import ObjectProperty, StringProperty
 
 from pymongo import MongoClient, errors
 from datetime import datetime, timedelta
-import uuid
 
 from receipt_generator import generate_fictional_receipts
 
@@ -53,7 +52,8 @@ class LoginScreen(Screen):
             # Proceed with successful login logic...
             print(f"User {username} logged in successfully.")
             App.get_running_app().current_user = username  # Set the current user
-            App.get_running_app().current_user_id = user["user_id"]  # Set the current user ID
+            App.get_running_app().current_user_id = user["_id"]  # Set the current user ID
+            print(f"Current user ID: {App.get_running_app().current_user_id}")
             self.manager.current = 'main'  # Navigate to the main screen
         else:
             # Password does not match
@@ -69,14 +69,10 @@ class NewUser(Screen):
  
     def create_user_profile(self, username, password, price_sensitivity):
         # This assumes that `self.price_sensitivity` holds the value from button selection
-        price_sensitivity = self.price_sensitivity if hasattr(self, 'price_sensitivity') else 'Medium'  # Default to 'Medium' if not set
-
-        # Generate a unique user ID
-        user_id = str(uuid.uuid4())
+        price_sensitivity = self.price_sensitivity if hasattr(self, 'price_sensitivity') and self.price_sensitivity is not None else 'Medium'  # Default to 'Medium' if not set
 
         # Create or update the user profile with the provided information
         profile = {
-            "user_id": user_id,
             "username": username,
             "password": password,  # Remember to hash passwords in a real application
             "preferences": {
@@ -267,6 +263,12 @@ class MyBasketApp(App):
         # Get all receipts for the user
         receipts = db['receipts'].find({"user_id": user_id})
         return list(receipts)
+    
+    def logout(self):
+        print(f"User {self.current_user} logged out.")
+        self.current_user = None
+        self.current_user_id = None
+        self.root.current = 'login'
     
 if __name__ == '__main__':
     MyBasketApp().run()

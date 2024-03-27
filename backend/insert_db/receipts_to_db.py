@@ -9,7 +9,7 @@ receipts = db.db['receipts']
 receipt_2136 = {
     "_id": "2136",
     "user_id": "user_1",
-    "created_at": "01.03.24 15:30",
+    "created_at": "01.03.2024 15:30",
     "uploaded_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
     "store": {
         "id": "0007",
@@ -249,7 +249,7 @@ receipt_2138 = {
 receipt_2139 = {
     "_id": "2139",
     "user_id": "user_1",
-    "created_at": "16.02.24 18:30",
+    "created_at": "16.02.2024 18:30",
     "uploaded_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
     "store": {
         "id": "0007",
@@ -426,7 +426,7 @@ receipt_2140 = {
 receipt_2141 = {
     "_id": "2141",
     "user_id": "user_3",
-    "created_at": "06.02.24 16:10",
+    "created_at": "06.02.2024 16:10",
     "uploaded_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
     "store": {
         "id": None,
@@ -628,7 +628,7 @@ receipt_2143 = {
 receipt_2144 = {
     "_id": "2144",
     "user_id": "user_3",
-    "created_at": "20.01.24 17:48",
+    "created_at": "20.01.2024 17:48",
     "uploaded_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
     "store": {
         "id": "0008",
@@ -662,7 +662,7 @@ receipt_2144 = {
 receipt_2145 = {
     "_id": "2145",
     "user_id": "user_1",
-    "created_at": "30.01.24 14:06",
+    "created_at": "30.01.2024 14:06",
     "uploaded_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
     "store": {
         "id": "0008",
@@ -767,7 +767,7 @@ receipt_2146 = {
 receipt_2147 = {
     "_id": "2147",
     "user_id": "user_3",
-    "created_at": "22.12.23 18:44",
+    "created_at": "22.12.2023 18:44",
     "uploaded_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
     "store": {
         "id": "0007",

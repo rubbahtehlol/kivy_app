@@ -82,7 +82,7 @@ WindowManager:
             cols:1
 
             Label:
-                text: "Welcome to the Receipt Scanner App"
+                text: "Welcome to the Store Recommender!"
                 font_size: 24
                 bold: True
                 size_hint: (0.2, 0.2)
@@ -123,7 +123,12 @@ WindowManager:
                         on_release:
                             app.root.current = "create_basket"
                             root.manager.transition.direction = "left"
-
+                    
+                    Button:
+                        text: "Log Out"
+                        on_release:
+                            app.logout()
+        
 <NewRecpScreen>
     name: "new_receipt"
     GridLayout:
@@ -152,6 +157,11 @@ WindowManager:
                 height: self.minimum_height
                 default_size: None, dp(56)
                 default_size_hint: 1, None
+        Button:
+            text: "Back"
+            on_release:
+                app.root.current = "main"
+                root.manager.transition.direction = "right"
 
 <ReceiptButton@Button>:
     receipt_data: None
