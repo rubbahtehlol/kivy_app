@@ -233,7 +233,6 @@ class CreBasketScreen(Screen):
         print(basket_items)
         days_back = None if selected_days == "All time" else int(selected_days.split()[0])
 
-
         if basket_items:
             prices = self.find_lowest_prices_for_basket(basket_items, days_back)
 
