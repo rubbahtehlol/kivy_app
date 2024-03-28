@@ -165,30 +165,54 @@ class ViewRecpScreen(Screen):
 
 class CreBasketScreen(Screen):
     def find_lowest_prices_for_basket(self, basket_items, days_back=None):
-        receipts = db['receipts']
+        groceries = db['groceries']
         results = {}
         
         for item in basket_items:
+            if item == '':
+                continue
+
             results[item] = {}
-            query = {"items.name": item}
+            query = {"name": item}
             if days_back is not None:
                 start_date = datetime.now() - timedelta(days=days_back)
-                query["purchase_date"] = {"$gte": start_date}
+                query["price_history.date"] = {"$gte": start_date}
 
 
             pipeline = [
                 {"$match": query},
-                {"$unwind": "$items"},
-                {"$match": {"items.name": item}},
-                {"$group": {"_id": "$items.name", "lowest_price": {"$min": "$items.price"}}}
+                {"$unwind": "$price_history"},
+                {'$sort': {'price_history.store': 1, 'price_history.date': -1}},
+                {'$group': {
+                            '_id': '$price_history.store',
+                            'latestDate': {'$first': '$price_history.date'},
+                            'minPrice': {'$min': '$price_history.price'},
+                            'itemName': {'$first': '$name'}
+                        }},
+                {'$group': {
+                            '_id': '$itemName',
+                            'stores': {
+                                '$push': {
+                                    'store': '$_id',
+                                    'date': '$latestDate',
+                                    'price': '$minPrice'
+                                }
+                            }
+                        }}
             ]
-            lowest_price = list(receipts.aggregate(pipeline))
-            if lowest_price:
+
+            # Execute the aggregation query
+            results = list(groceries.aggregate(pipeline))
+            print(results)
+            if results:
                 # Assuming lowest_price contains at least one result
-                results[item] = lowest_price[0]['lowest_price']
+                results = results[0]
             else:
                 results[item] = "No data"
 
+            # Print the result
+            for doc in results:
+                print(doc)
         return results
 
     
@@ -206,17 +230,39 @@ class CreBasketScreen(Screen):
 
         # Assuming selected_days and basket_items are passed correctly from the UI
         basket_items = args[0] if args else []
+        print(basket_items)
         days_back = None if selected_days == "All time" else int(selected_days.split()[0])
+
 
         if basket_items:
             prices = self.find_lowest_prices_for_basket(basket_items, days_back)
 
+            print(prices)
+            display_texts = []
+
+            item_name = prices['_id']
+            stores = prices['stores']
+            
+            # Sort stores by price (ascending), then by date (descending)
+            sorted_stores = sorted(stores, key=lambda x: (x['price'], datetime.strptime(x['date'], '%d.%m.%y %H:%M')), reverse=True)
+            
+            # Get the store with the lowest price and newest date
+            if sorted_stores:
+                cheapest_newest_store = sorted_stores[-1]  # Last item after sorting
+                display_text = f"{item_name}: {cheapest_newest_store['store']} at {cheapest_newest_store['price']} (Newest: {cheapest_newest_store['date']})"
+                display_texts.append(display_text)
+
+            # Join the display texts for all items
+            final_display_text = '\n'.join(display_texts)
+
+            print(final_display_text)
             # Proceed to display these prices on a new screen
-            display_text = '\n'.join([f"{item}: {price_info}" for item, price_info in prices.items()])
-            App.get_running_app().price_check_results = display_text
+            # display_text = '\n'.join([f"{item}: {price_info}" for item, price_info in prices.items()])
+            App.get_running_app().price_check_results = final_display_text
 
             # Navigate to the PriceResultsScreen
             self.manager.current = 'price_results'
+        
         else:
             print("No items in the basket to check.")
 
