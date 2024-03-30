@@ -29,6 +29,12 @@ for receipt in receipts:
         item_name = item['name']
         brand = item.get('brand', None)  # 'brand' may not always be present
 
+        quantity = item.get('quantity', 1)
+
+        # Check if quantity is effectively 0, empty, or not a positive number and default to 1
+        if not quantity or (isinstance(quantity, (int, float)) and quantity <= 0):
+            quantity = 1
+
         # Build the new or updated item document
         new_item = {
             "name": item_name,
@@ -38,7 +44,7 @@ for receipt in receipts:
             "unit": item['unit'],
             "price_history": [
                 {
-                    "price": item['price'],
+                    "price": item['price'] / quantity,
                     "store": store_name,
                     "date": receipt_date
                 }
@@ -52,13 +58,12 @@ for receipt in receipts:
             new_item["brand"] = brand
 
         # Check if the item already exists in the 'groceries' collection
-        existing_item = groceries_collection.find_one({"name": item_name, "brand": brand})
+        existing_item = groceries_collection.find_one({"name": item_name})
         if existing_item:
-            # Update the existing item with the new price and append to price history
             groceries_collection.update_one(
                 {"_id": existing_item['_id']},
                 {
-                    "$set": {"current_price": item['price'], "updated_at": datetime.now().strftime("%d.%m.%Y %H:%M")},
+                    "$set": {"updated_at": datetime.now().strftime("%d.%m.%Y %H:%M")},
                     "$push": {"price_history": new_item['price_history'][0]}
                 }
             )

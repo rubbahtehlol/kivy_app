@@ -31,7 +31,7 @@ receipt_2149 = {
           "size": "970",
           "unit": "gram",
           "quantity": 2,
-          "price": 16.80,
+          "price": 33.60,
           "discount": None,
           "discounted_price": None,
           "price_original": None
@@ -762,7 +762,7 @@ receipt_2156 = {
         { "name": "TENNBRIKETTER",
           "size": "32",
           "unit": "STK",
-          "quantity": 2,
+          "quantity": 1,
           "price": 37.90,
           "discount": None,
           "discounted_price": None,

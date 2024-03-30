@@ -157,7 +157,7 @@ class ViewRecpScreen(Screen):
 
         def delete_receipt(self, receipt):
             # Assuming receipt is a dictionary with a unique ID
-            db['receipts'].delete_one({"receipt_id": receipt["receipt_id"]})
+            db['receipts'].delete_one({"'receipt_id'": receipt["receipt_id"]})
             print("Receipt deleted.")
 
             # Close the popup
@@ -166,14 +166,14 @@ class ViewRecpScreen(Screen):
 class CreBasketScreen(Screen):
     def find_lowest_prices_for_basket(self, basket_items, days_back=None):
         groceries = db['groceries']
-        results = {}
+        results = []
         
         for item in basket_items:
             if item == '':
                 continue
 
-            results[item] = {}
-            query = {"name": item}
+            # results[item] = {}
+            query = {"name": item.upper()}
             if days_back is not None:
                 start_date = datetime.now() - timedelta(days=days_back)
                 query["price_history.date"] = {"$gte": start_date}
@@ -202,17 +202,15 @@ class CreBasketScreen(Screen):
             ]
 
             # Execute the aggregation query
-            results = list(groceries.aggregate(pipeline))
-            print(results)
-            if results:
-                # Assuming lowest_price contains at least one result
-                results = results[0]
-            else:
-                results[item] = "No data"
+            result = list(groceries.aggregate(pipeline))
 
-            # Print the result
-            for doc in results:
-                print(doc)
+            if result:
+                # Assuming lowest_price contains at least one result
+                results.append(result[0])
+            else:
+                results.append({'_id': item.title(), 'stores': None})
+        
+        print(results)
         return results
 
     
@@ -234,25 +232,29 @@ class CreBasketScreen(Screen):
         days_back = None if selected_days == "All time" else int(selected_days.split()[0])
 
         if basket_items:
-            prices = self.find_lowest_prices_for_basket(basket_items, days_back)
-
-            print(prices)
+            results = self.find_lowest_prices_for_basket(basket_items, days_back)
             display_texts = []
 
-            item_name = prices['_id']
-            stores = prices['stores']
-            
-            # Sort stores by price (ascending), then by date (descending)
-            sorted_stores = sorted(stores, key=lambda x: (x['price'], datetime.strptime(x['date'], '%d.%m.%y %H:%M')), reverse=True)
-            
-            # Get the store with the lowest price and newest date
-            if sorted_stores:
-                cheapest_newest_store = sorted_stores[-1]  # Last item after sorting
-                display_text = f"{item_name}: {cheapest_newest_store['store']} at {cheapest_newest_store['price']} (Newest: {cheapest_newest_store['date']})"
-                display_texts.append(display_text)
+            for prices in results:
+                item_name = prices['_id']
+                stores = prices['stores']
 
-            # Join the display texts for all items
-            final_display_text = '\n'.join(display_texts)
+                if stores is None:
+                    display_text = f"{item_name}: No data available"
+                    display_texts.append(display_text)
+                    continue
+            
+                # Sort stores by price (ascending), then by date (descending)
+                sorted_stores = sorted(stores, key=lambda x: (x['price'], datetime.strptime(x['date'], '%d.%m.%Y %H:%M')), reverse=True)
+                
+                # Get the store with the lowest price and newest date
+                if sorted_stores:
+                    cheapest_newest_store = sorted_stores[-1]  # Last item after sorting
+                    display_text = f"{item_name.title()}: {cheapest_newest_store['price']}kr at {cheapest_newest_store['store'].title()} (Newest: {cheapest_newest_store['date']})"
+                    display_texts.append(display_text)
+
+                # Join the display texts for all items
+                final_display_text = '\n'.join(display_texts)
 
             print(final_display_text)
             # Proceed to display these prices on a new screen
