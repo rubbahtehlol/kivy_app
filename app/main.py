@@ -9,6 +9,7 @@ from kivy.properties import ObjectProperty, StringProperty
 
 from pymongo import MongoClient, errors
 from datetime import datetime, timedelta
+from plyer import gps
 
 from receipt_generator import generate_fictional_receipts
 
@@ -245,11 +246,11 @@ class CreBasketScreen(Screen):
                     continue
             
                 # Sort stores by price (ascending), then by date (descending)
-                sorted_stores = sorted(stores, key=lambda x: (x['price'], datetime.strptime(x['date'], '%d.%m.%Y %H:%M')), reverse=True)
-                
+                sorted_stores = sorted(stores, key=lambda x: (x['price'], -datetime.strptime(x['date'], '%d.%m.%Y %H:%M').timestamp()))
+
                 # Get the store with the lowest price and newest date
                 if sorted_stores:
-                    cheapest_newest_store = sorted_stores[-1]  # Last item after sorting
+                    cheapest_newest_store = sorted_stores[0]  # Last item after sorting
                     display_text = f"{item_name.title()}: {cheapest_newest_store['price']}kr at {cheapest_newest_store['store'].title()} (Newest: {cheapest_newest_store['date']})"
                     display_texts.append(display_text)
 
@@ -282,6 +283,15 @@ class MyBasketApp(App):
     current_user = None  # Global variable to keep track of the current user
     current_user_id = None  # Global variable to keep track of the current user's ID
     price_check_results = StringProperty("")  # Property to hold the price check results
+
+    # def on_start(self):
+    #     gps.configure(on_location=self.on_gps_location)
+    #     gps.start()
+
+    # def on_gps_location(self, **kwargs):
+    #     kwargs['lat'], kwargs['lon']
+    #     print(f"Latitude: {kwargs['lat']}, Longitude: {kwargs['lon']}")
+
 
     def build(self):
         self.title = 'My Basket App'
