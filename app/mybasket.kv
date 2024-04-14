@@ -163,25 +163,6 @@ WindowManager:
                 app.root.current = "main"
                 root.manager.transition.direction = "right"
 
-<ReceiptButton@Button>:
-    receipt_data: None
-    on_release: app.show_receipt_details(self.receipt_data)
-
-<ReceiptDetailPopup@BoxLayout>:
-    orientation: 'vertical'
-    Label:
-        id: popup_content
-        text: ''
-    Button:
-        text: 'Delete Receipt'
-        size_hint: 1, 0.2
-        on_release: app.delete_receipt(root.ids.popup_content.receipt_id)
-    Button:
-        text: 'Close'
-        size_hint: 1, 0.2
-        on_release: app.root.get_screen('view_receipts').dismiss_popup()
-
-
 <CreBasketScreen>
     name: "create_basket"
     GridLayout:
@@ -192,7 +173,7 @@ WindowManager:
 
         Spinner:
             id: day_spinner
-            text: 'Select Days'
+            text: "Select Days"
             values: ['1 day', '7 days', '14 days', '30 days', 'All time']
             size_hint: (1, 0.1)
 
@@ -228,7 +209,14 @@ WindowManager:
         orientation: "vertical"
         Label:
             id: results_label
-            text: ""
+            text: app.price_check_results
+            size_hint_y: None
+            height: self.texture_size[1]
+        Button:
+            text: "View All Store Details"
+            size_hint_y: None
+            height: "48dp"
+            on_release: root.show_all_stores()
         Button:
             text: "Back"
             on_release: app.root.current = "create_basket"

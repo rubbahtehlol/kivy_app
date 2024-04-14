@@ -9,9 +9,7 @@ from kivy.properties import ObjectProperty, StringProperty
 
 from pymongo import MongoClient, errors
 from datetime import datetime, timedelta
-from collections import defaultdict
-import re
-# from plyer import gps
+from plyer import gps
 
 from receipt_generator import generate_fictional_receipts
 
@@ -168,222 +166,235 @@ class ViewRecpScreen(Screen):
 
 class CreBasketScreen(Screen):
     user_location = ObjectProperty(None)  # Store user's location as a property
-    user_location = (62.738904078963586, 7.140731219084178)  # Placeholder for user's location
 
-    def check_prices(self, selected_days, basket_items):
-        if not self.validate_days(selected_days):
-            return
-        
+    def find_store_recommendations(self, user_id, basket_items, selected_days):
+        # Convert days to integer or None for 'All time'
         days_back = None if selected_days == "All time" else int(selected_days.split()[0])
-        user_id = App.get_running_app().current_user_id
+        
+        # Fetch lowest prices
+        prices = self.find_lowest_prices_for_basket(basket_items, days_back)
+
+        # Fetch user's location
+        user_location = [7.157794939293244, 62.73654532445558]  # This should ideally come from the GPS module
+
+        # Fetch distance data for each store involved
+        involved_stores = set(store['store'] for price_info in prices for store in price_info['stores'])
+        store_data = {store['_id']: store for store in db['receiptsys']['stores'].find({'_id': {'$in': list(involved_stores)}})}
+        distances = {store: self.calculate_distance(user_location, store_data[store]['location']['coordinates']) for store in involved_stores}
+
+        # Fetch user's price sensitivity
         user_profile = db['user_profiles'].find_one({'_id': user_id})
         price_sensitivity = user_profile['preferences']['price_sensitivity']
-        
-        prices = self.find_lowest_prices_for_basket(basket_items, days_back)
-        print(prices)
-        store_distances = self.fetch_store_distances(prices)
-        rec_store, rec_score, detail_scores = self.calculate_store_scores(prices, store_distances, price_sensitivity)
-        
-        self.display_price_results(rec_store, detail_scores)
 
-    def validate_days(self, selected_days):
-        valid_values = ['1 day', '7 days', '14 days', '30 days', 'All time']
-        if selected_days not in valid_values:
-            self.show_popup('Invalid Selection', 'Please select a valid number of days.')
-            return False
-        return True
+        # Calculate scores
+        scored_stores = calculate_store_scores(prices, distances, price_sensitivity)
 
-    def find_lowest_prices_for_basket(self, basket_items, days_back=None):
-        # groceries = db['groceries']
-        results = []
-        for item in basket_items:
-            if not item.strip():
-                continue
-            results.append(self.query_grocery_prices(item.upper(), days_back))
-        return results
-
-    def query_grocery_prices(self, item_name, days_back):
-        groceries = db['groceries']
-        start_date = datetime.now() - timedelta(days=days_back) if days_back else None
-        query = {"name": item_name, "price_history.date": {"$gte": start_date}} if start_date else {"name": item_name}
-        pipeline = [
-            {'$match': query},
-            {'$unwind': '$price_history'},
-            {'$sort': {'price_history.store': 1, 'price_history.date': -1}},
-            {'$group': {
-                '_id': '$price_history.store',
-                'latestDate': {'$first': '$price_history.date'},
-                'minPrice': {'$min': '$price_history.price'},
-                'itemName': {'$first': '$name'}
-            }},
-            {'$group': {
-                '_id': '$itemName',
-                'stores': {'$push': {'store': '$_id', 'date': '$latestDate', 'price': '$minPrice'}}
-            }}
+        # Format for display
+        display_texts = [
+            f"Item: {store['item']}, Store: {store['store']}, Price: {store['price']}, Distance: {store['distance']:.2f} meters, Score: {store['score']:.2f}"
+            for store in scored_stores
         ]
-        result = list(groceries.aggregate(pipeline))
-        return result[0] if result else {'_id': item_name, 'stores': []}
-
-    def fetch_store_distances(self, prices):
-        involved_stores = {store['store'].lower() for price_info in prices for store in price_info['stores']}
-
-        # Prepare an $or query with case-insensitive regex matches for each store
-        regex_query = [{'name': re.compile(f'^{re.escape(store)}$', re.IGNORECASE)} for store in involved_stores]
-        temp_data = db['stores'].find({'$or': regex_query})
-        store_data = {store['name'].lower(): store for store in temp_data}
-      
-        # Calculate distances using names directly from store_data
-        distances = {}
-        for store_name, store_info in store_data.items():
-            if 'location' in store_info and 'coordinates' in store_info['location']:
-                store_location = store_info['location']['coordinates']
-                distances[store_name] = self.calculate_distance(self.user_location, store_location)
-            else:
-                print(f"Location data missing for store: {store_name}")
-                distances[store_name] = None  # or handle as needed
-
-        return distances
-
-    def calculate_store_scores(self, prices, distances, price_sensitivity):
-        # Log the distances to verify their availability
-        print("Distances available:", distances)
-
-        # Sensitivity weights as defined
-        sensitivity_weights = {'High':      {'price': 0.7, 'distance': 0.3}, 
-                               'Medium':    {'price': 0.5, 'distance': 0.5}, 
-                               'Low':       {'price': 0.3, 'distance': 0.7}
-                               }
-        weight = sensitivity_weights[price_sensitivity]
-
-        # Store scores by store name and details, we introduce defaultdict to avoid key errors
-        store_scores = defaultdict(list)
-        detailed_scores = defaultdict(dict)
-
-        # Iterate over each item and their respective stores
-        for item in prices:
-            for store in item['stores']:
-                store_name = store['store'].lower()
-                store_price = store['price']
-
-                # Retrieve the distance for the current store, using float('inf') if not available
-                store_distance = distances.get(store_name, float('inf'))
-
-                # Calculate the score using both price and distance, taking into account the weight based on price sensitivity
-                score = (weight['price'] * store_price) + (weight['distance'] * store_distance)
-
-                # # Append a dictionary with all store details plus the calculated score
-                # scored_store = {
-                #     'item': item['_id'],
-                #     'store': store['store'],
-                #     'price': store['price'],
-                #     'distance': store_distance,  # Make sure to include the distance in the output
-                #     'score': score
-                # }
-                store_scores[store_name].append(score)
-
-                if item['_id'] not in detailed_scores[store_name]:
-                    detailed_scores[store_name][item['_id']] = []
-                detailed_scores[store_name][item['_id']].append({
-                    'price': store_price,
-                    'distance': store_distance,
-                    'score': score
-                })
-
-        print("Store scores:", store_scores)
-        print("Detailed scores:", detailed_scores)
-
-        # Calculate average scores
-        average_scores = {store: sum(scores) / len(scores) for store, scores in store_scores.items()}
-
-        # Find the store with the lowest average score
-        recommended_store = min(average_scores, key=average_scores.get)
-        recommended_score = average_scores[recommended_store]
-
-        return recommended_store, recommended_score, detailed_scores
-
-        # # Sort the stores based on the score in ascending order (lower is better)
-        # scored_stores.sort(key=lambda x: x['score'])
-        # return scored_stores
-
-
-    def display_price_results(self, recommended_store, detailed_scores):
-        display_texts = [f"Recommended Store: {recommended_store.title()} (Best Average Score)"]
-        for store, item in detailed_scores.items():
-            display_texts.append(f"Store: {store.title()}")
-            for item, details in item.items():
-                for detail in details:
-                    display_texts.append(f"  Item: {item.title()}, Price: {detail['price']:.1f}kr, Distance: {detail['distance']:.1f} km, Score: {detail['score']:.2f}")
-
-
-        print(display_texts)
-
-        # Store these details for later use in the GUI
         App.get_running_app().price_check_results = "\n".join(display_texts)
-        App.get_running_app().detailed_store_info = detailed_scores
         self.manager.current = 'price_results'
 
 
-        # print("Average scores:", average_scores)
-        # display_text = (f"Recommended Store: {recommended_store}\n"
-        #                 f"Average Score: {recommended_score:.1f}\n\n"
-        #                 "Scores by Store:\n" +
-        #                 "\n".join(f"{store}: {score:.1f}" for store, score in average_scores.items()))
 
-        # # Set the result text for the application and switch screens
-        # App.get_running_app().price_check_results = display_text
-        # self.manager.current = 'price_results'
+    def find_lowest_prices_for_basket(self, basket_items, days_back=None):
+        groceries = db['groceries']
+        results = []
+        
+        if days_back is not None:
+            start_date = datetime.now() - timedelta(days=days_back)
 
-    # def display_price_results(self, scored_stores):
+        for item in basket_items:
+            if item == '':
+                continue
 
-    #     display_texts = [
-    #         f"Item: {store['item']}, Store: {store['store']}, Price: {store['price']}kr, Distance: {store['distance']:.1f} km, Score: {store['score']:.1f}"
-    #         for store in scored_stores
-    #     ]
-    #     App.get_running_app().price_check_results = "\n".join(display_texts)
-    #     self.manager.current = 'price_results'
+            query = {"name": item.upper()}
+            query["price_history.date"] = {"$gte": start_date}
 
-    def show_popup(self, title, message):
-        popup = Popup(title=title, content=Label(text=message), size_hint=(None, None), size=(400, 200))
-        popup.open()
 
-    def calculate_distance(self, user_location, store_location):
-        from math import radians, cos, sin, sqrt, atan2
-        # Earth's radius in kilometers
-        R = 6371.0
+            pipeline = [
+                {'$match': query},
+                {'$unwind': '$price_history'},
+                {'$sort': {'price_history.store': 1, 'price_history.date': -1}},
+                {'$group': {
+                            '_id': '$price_history.store',
+                            'latestDate': {'$first': '$price_history.date'},
+                            'minPrice': {'$min': '$price_history.price'},
+                            'itemName': {'$first': '$name'}
+                        }},
+                {'$group': {
+                            '_id': '$itemName',
+                            'stores': {
+                                '$push': {
+                                    'store': '$_id',
+                                    'date': '$latestDate',
+                                    'price': '$minPrice'
+                                }
+                            }
+                        }}
+            ]
 
-        # Convert latitude and longitude from degrees to radians
-        lat1, lon1 = map(radians, user_location)
-        lat2, lon2 = map(radians, store_location)
+            # Execute the aggregation query
+            result = list(groceries.aggregate(pipeline))
 
-        # Difference in coordinates
-        dlon = lon2 - lon1
-        dlat = lat2 - lat1
+            if result:
+                # Assuming lowest_price contains at least one result
+                results.append(result[0])
+            else:
+                results.append({'_id': item.title(), 'stores': None})
+        
+        print(results)
+        return results
 
-        # Haversine formula
-        a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
-        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    
+    def check_prices(self, selected_days, *args):
+        # Define a list of valid values for comparison
+        valid_values = ['1 day', '7 days', '14 days', '30 days', 'All time']
 
-        # Calculate the distance
-        distance = R * c
-        return distance
+        # Check if the selected value is in the list of valid values
+        if selected_days not in valid_values:
+            popup = Popup(title='Invalid Selection',
+            content=Label(text='Please select a valid number of days.'),
+            size_hint=(None, None), size=(400, 200))
+            popup.open()
+            return
+
+        # Assuming selected_days and basket_items are passed correctly from the UI
+        basket_items = args[0] if args else []
+        print(basket_items)
+        days_back = None if selected_days == "All time" else int(selected_days.split()[0])
+
+        if basket_items:
+            results = self.find_lowest_prices_for_basket(basket_items, days_back)
+            display_texts = []
+
+            for prices in results:
+                item_name = prices['_id']
+                stores = prices['stores']
+
+                if stores is None:
+                    display_text = f"{item_name}: No data available"
+                    display_texts.append(display_text)
+                    continue
+            
+                # Sort stores by price (ascending), then by date (descending)
+                sorted_stores = sorted(stores, key=lambda x: (x['price'], -datetime.strptime(x['date'], '%d.%m.%Y %H:%M').timestamp()))
+
+                # Get the store with the lowest price and newest date
+                if sorted_stores:
+                    cheapest_newest_store = sorted_stores[0]  # Last item after sorting
+                    display_text = f"{item_name.title()}: {cheapest_newest_store['price']}kr at {cheapest_newest_store['store'].title()} (Newest: {cheapest_newest_store['date']})"
+                    display_texts.append(display_text)
+
+                # Join the display texts for all items
+                final_display_text = '\n'.join(display_texts)
+
+            print(final_display_text)
+            # Proceed to display these prices on a new screen
+            # display_text = '\n'.join([f"{item}: {price_info}" for item, price_info in prices.items()])
+            App.get_running_app().price_check_results = final_display_text
+
+            # Navigate to the PriceResultsScreen
+            self.manager.current = 'price_results'
+        
+        else:
+            print("No items in the basket to check.")
+
+
+    def fetch_nearest_stores(db, user_location, max_distance=5000):
+        """
+        Fetches stores from MongoDB within a specified maximum distance from the user's location.
+        
+        Args:
+        db (MongoClient): The database connection.
+        user_location (list): The longitude and latitude of the user's current location.
+        max_distance (int): Maximum distance in meters from the user's location to consider (default 5000 meters).
+        
+        Returns:
+        list: A list of documents representing the nearest stores.
+        """
+        stores = db['receiptsys']['stores']
+        # Ensure the collection has a 2dsphere index on the 'location' field
+        stores.create_index([("location", "2dsphere")])
+
+        # Geospatial query to find nearest stores
+        query = {
+            "$geoNear": {
+                "near": {"type": "Point", "coordinates": user_location},
+                "distanceField": "distance",
+                "maxDistance": max_distance,
+                "spherical": True
+            }
+        }
+
+        results = stores.aggregate([query])
+        return list(results)
+
+    # Example usage:
+    # db = MongoClient().your_database_name
+    # user_location = [7.157794939293244, 62.73654532445558]  # Longitude first, then latitude
+    # nearest_stores = fetch_nearest_stores(db, user_location)
+    # for store in nearest_stores:
+    #     print(store)
+
+def calculate_store_scores(prices, distances, price_sensitivity):
+    """
+    Calculate a combined score for stores based on prices and distances with respect to price sensitivity.
+
+    Args:
+    prices (list): List of dictionaries containing price data and store names.
+    distances (dict): Dictionary mapping store names to distances.
+    price_sensitivity (str): User's price sensitivity ('High', 'Medium', 'Low').
+
+    Returns:
+    list: Adjusted list of stores with scores based on price sensitivity.
+    """
+    # Define sensitivity weights (tune these based on further analysis or user feedback)
+    sensitivity_weights = {
+        'High': {'price': 0.7, 'distance': 0.3},
+        'Medium': {'price': 0.5, 'distance': 0.5},
+        'Low': {'price': 0.3, 'distance': 0.7}
+    }
+    
+    weight = sensitivity_weights[price_sensitivity]
+    scored_stores = []
+
+    for item in prices:
+        item_name = item['_id']
+        for store in item['stores']:
+            store_name = store['store']
+            store_price = store['price']
+            store_distance = distances.get(store_name, float('inf'))  # Default to inf if no distance is known
+
+            # Calculate score
+            score = (weight['price'] * store_price) + (weight['distance'] * store_distance)
+            scored_stores.append({
+                'item': item_name,
+                'store': store_name,
+                'price': store_price,
+                'distance': store_distance,
+                'score': score
+            })
+
+    # Sort stores by score for each item
+    scored_stores.sort(key=lambda x: x['score'])
+    return scored_stores
+
+# Example usage:
+# prices = [{'_id': 'APPELSINJUICE PREMIUM', 'stores': [{'store': 'KIWI LANGMYRVEIEN', 'price': 22.8}, {'store': 'BUNNPRIS & GOURMET FUGLSET', 'price': 36.9}]}]
+# distances = {'KIWI LANGMYRVEIEN': 1200, 'BUNNPRIS & GOURMET FUGLSET': 2000}
+# price_sensitivity = 'High'
+# store_scores = calculate_store_scores(prices, distances, price_sensitivity)
+# print(store_scores)
+
 
 
 class PriceResultsScreen(Screen):
-    def show_all_stores(self):
-        detailed_info = App.get_running_app().detailed_store_info
-        # Convert detailed_info to a string or update a widget to display it
-        all_stores_text = self.format_all_stores(detailed_info)
-        self.ids.results_label.text = all_stores_text
-
-    def format_all_stores(self, detailed_info):
-        texts = []
-        for store, items in detailed_info.items():
-            texts.append(f"Store: {store}")
-            for item, details in items.items():
-                for detail in details:
-                    texts.append(f"  Item: {item}, Price: {detail['price']}kr, Distance: {detail['distance']:.1f} km, Score: {detail['score']:.1f}")
-        return "\n".join(texts)
-
+    def on_enter(self, *args):
+        # Display the results
+        self.ids.results_label.text = App.get_running_app().price_check_results
 
 class WindowManager(ScreenManager):
     pass
@@ -395,7 +406,6 @@ class MyBasketApp(App):
     current_user = None  # Global variable to keep track of the current user
     current_user_id = None  # Global variable to keep track of the current user's ID
     price_check_results = StringProperty("")  # Property to hold the price check results
-    detailed_store_info = ObjectProperty(None)  # Property to hold detailed store information
 
     # def on_start(self):
     #     gps.configure(on_location=self.on_gps_location)
