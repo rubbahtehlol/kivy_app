@@ -195,10 +195,14 @@ WindowManager:
 
         Button:
             text: "Check Prices"
+            size_hint_y: None
+            height: "48dp"
             on_release: root.check_prices(day_spinner.text, [item1.text, item2.text, item3.text, item4.text, item5.text])
 
         Button:
             text: "Back"
+            size_hint_y: None
+            height: "48dp"
             on_release:
                 app.root.current = "main"
                 root.manager.transition.direction = "right"
@@ -219,4 +223,6 @@ WindowManager:
             on_release: root.show_all_stores()
         Button:
             text: "Back"
+            size_hint_y: None
+            height: "48dp"
             on_release: app.root.current = "create_basket"

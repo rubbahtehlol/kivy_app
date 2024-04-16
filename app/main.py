@@ -270,17 +270,9 @@ class CreBasketScreen(Screen):
 
                 # Calculate the score using both price and distance, taking into account the weight based on price sensitivity
                 score = (weight['price'] * store_price) + (weight['distance'] * store_distance)
-
-                # # Append a dictionary with all store details plus the calculated score
-                # scored_store = {
-                #     'item': item['_id'],
-                #     'store': store['store'],
-                #     'price': store['price'],
-                #     'distance': store_distance,  # Make sure to include the distance in the output
-                #     'score': score
-                # }
                 store_scores[store_name].append(score)
 
+                # Append a dictionary with all store details plus the calculated score
                 if item['_id'] not in detailed_scores[store_name]:
                     detailed_scores[store_name][item['_id']] = []
                 detailed_scores[store_name][item['_id']].append({
