@@ -1,5 +1,10 @@
+# Data files
+app/backend/data/
+
 # Byte-compiled / optimized / DLL files
 app/__pycache__/
+app/backend/__pycache__/
+app/backend/database/__pycache__/
 __pycache__/
 *.py[cod]
 *$py.class

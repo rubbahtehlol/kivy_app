@@ -1,33 +1,40 @@
 import kivy
 kivy.require('2.3.0')
 
+# Standard library imports
+from collections import defaultdict
+from datetime import datetime, timedelta
+import re
+
+# Third party imports
 from kivy.app import App
+from kivy.properties import ObjectProperty, StringProperty
 from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 from kivy.uix.screenmanager import Screen, ScreenManager
-from kivy.properties import ObjectProperty, StringProperty
-
-from pymongo import MongoClient, errors
-from datetime import datetime, timedelta
-from collections import defaultdict
-import re
+# from pymongo import MongoClient, errors
 # from plyer import gps
 
+# Local application imports
 from receipt_generator import generate_fictional_receipts
+from backend.database.mongo_db import DatabaseOperations
 
-# global variables for MongoDB host (default port is 27017)
-DOMAIN = 'localhost:'
-PORT = 27017
+# # global variables for MongoDB host (default port is 27017)
+# DOMAIN = 'localhost:'
+# PORT = 27017
+
+# # Connect to MongoDB and target the 'ReceiptSys' database
+# try:
+#     client = MongoClient(host=[str(DOMAIN) + str(PORT)], serverSelectionTimeoutMS=3000)
+#     db = client['receiptsys']  # Specify the 'ReceiptSys' database
+#     print("server version:", client.server_info()["version"])
+# except errors.ServerSelectionTimeoutError as err:
+#     client = None
+#     db = None
+#     print("pymongo ERROR:", err)
 
 # Connect to MongoDB and target the 'ReceiptSys' database
-try:
-    client = MongoClient(host=[str(DOMAIN) + str(PORT)], serverSelectionTimeoutMS=3000)
-    db = client['receiptsys']  # Specify the 'ReceiptSys' database
-    print("server version:", client.server_info()["version"])
-except errors.ServerSelectionTimeoutError as err:
-    client = None
-    db = None
-    print("pymongo ERROR:", err)
+database = DatabaseOperations()
 
 class LoginScreen(Screen):
     def login(self, username, password):
@@ -40,7 +47,7 @@ class LoginScreen(Screen):
             return
 
         # Attempt to find the user in the database
-        user = db['user_profiles'].find_one({"username": username})
+        user = database.db['user_profiles'].find_one({"username": username})
 
         # Check if the user does not exist
         if not user:
@@ -69,7 +76,7 @@ class MainScreen(Screen):
 
 class NewUser(Screen):
     price_sensitivity = None  # Default value; adjust as needed
- 
+
     def create_user_profile(self, username, password, price_sensitivity):
         # This assumes that `self.price_sensitivity` holds the value from button selection
         price_sensitivity = self.price_sensitivity if hasattr(self, 'price_sensitivity') and self.price_sensitivity is not None else 'Medium'  # Default to 'Medium' if not set
@@ -85,7 +92,7 @@ class NewUser(Screen):
         }
 
         # Check if the user already exists to decide on create or update
-        existing_user = db['user_profiles'].find_one({"username": username})
+        existing_user = database.db['user_profiles'].find_one({"username": username})
         if existing_user:
             popup_content = Label(text="User already exists. Please log in or use a different username.")
             popup = Popup(title="User already exists",
@@ -95,7 +102,7 @@ class NewUser(Screen):
             return
         else:
             # Insert new user profile
-            db['user_profiles'].insert_one(profile)
+            database.db['user_profiles'].insert_one(profile)
             print("Created new user profile.")
 
         self.manager.current = 'login'  # Redirect to main screen after creating profile
@@ -107,7 +114,7 @@ class NewUser(Screen):
 class NewRecpScreen(Screen):
     def add_purchase_to_history(self, user_id, receipt_data):
         # receipt_data should be a dict containing at least 'receipt_id' and 'date'
-        db['user_profiles'].update_one(
+        database.db['user_profiles'].update_one(
             {"user_id": user_id},
             {"$push": {"purchase_history": receipt_data}})
         print("Purchase added to history.")
@@ -120,10 +127,10 @@ class NewRecpScreen(Screen):
                           size_hint=(None, None), size=(400, 200))
             popup.open()
             return
-        
+
         receipts = generate_fictional_receipts(user_id, 10)  # Generate 10 receipts
         for receipt in receipts:
-            db['receipts'].insert_one(receipt)
+            database.db['receipts'].insert_one(receipt)
         print("Receipts generated and inserted into the database.")
 
 class ViewRecpScreen(Screen):
@@ -139,7 +146,7 @@ class ViewRecpScreen(Screen):
         #     ]
         #     else:
         #         print("User profile not found.")
-        
+
         def open_receipt_popup(self, receipt):
             # content = BoxLayout(orientation='vertical')
             # for item in receipt['items']:
@@ -160,7 +167,7 @@ class ViewRecpScreen(Screen):
 
         def delete_receipt(self, receipt):
             # Assuming receipt is a dictionary with a unique ID
-            db['receipts'].delete_one({"receipt_id": receipt["receipt_id"]})
+            database.db['receipts'].delete_one({"receipt_id": receipt["receipt_id"]})
             print("Receipt deleted.")
 
             # Close the popup
@@ -173,18 +180,18 @@ class CreBasketScreen(Screen):
     def check_prices(self, selected_days, basket_items):
         if not self.validate_days(selected_days):
             return
-        
+
         days_back = None if selected_days == "All time" else int(selected_days.split()[0])
         user_id = App.get_running_app().current_user_id
-        user_profile = db['user_profiles'].find_one({'_id': user_id})
+        user_profile = database.db['user_profiles'].find_one({'_id': user_id})
         price_sensitivity = user_profile['preferences']['price_sensitivity']
-        
+
         prices = self.find_lowest_prices_for_basket(basket_items, days_back)
         print(prices)
         store_distances = self.fetch_store_distances(prices)
-        rec_store, rec_score, detail_scores = self.calculate_store_scores(prices, store_distances, price_sensitivity)
-        
-        self.display_price_results(rec_store, detail_scores)
+        rec_store, rec_score, detail_scores, avg_scores = self.calculate_store_scores(prices, store_distances, price_sensitivity)
+
+        self.display_price_results(rec_store, rec_score, detail_scores, avg_scores)
 
     def validate_days(self, selected_days):
         valid_values = ['1 day', '7 days', '14 days', '30 days', 'All time']
@@ -203,7 +210,7 @@ class CreBasketScreen(Screen):
         return results
 
     def query_grocery_prices(self, item_name, days_back):
-        groceries = db['groceries']
+        groceries = database.db['groceries']
         start_date = datetime.now() - timedelta(days=days_back) if days_back else None
         query = {"name": item_name, "price_history.date": {"$gte": start_date}} if start_date else {"name": item_name}
         pipeline = [
@@ -229,9 +236,9 @@ class CreBasketScreen(Screen):
 
         # Prepare an $or query with case-insensitive regex matches for each store
         regex_query = [{'name': re.compile(f'^{re.escape(store)}$', re.IGNORECASE)} for store in involved_stores]
-        temp_data = db['stores'].find({'$or': regex_query})
+        temp_data = database.db['stores'].find({'$or': regex_query})
         store_data = {store['name'].lower(): store for store in temp_data}
-      
+
         # Calculate distances using names directly from store_data
         distances = {}
         for store_name, store_info in store_data.items():
@@ -249,8 +256,8 @@ class CreBasketScreen(Screen):
         print("Distances available:", distances)
 
         # Sensitivity weights as defined
-        sensitivity_weights = {'High':      {'price': 0.7, 'distance': 0.3}, 
-                               'Medium':    {'price': 0.5, 'distance': 0.5}, 
+        sensitivity_weights = {'High':      {'price': 0.7, 'distance': 0.3},
+                               'Medium':    {'price': 0.5, 'distance': 0.5},
                                'Low':       {'price': 0.3, 'distance': 0.7}
                                }
         weight = sensitivity_weights[price_sensitivity]
@@ -281,8 +288,8 @@ class CreBasketScreen(Screen):
                     'score': score
                 })
 
-        print("Store scores:", store_scores)
-        print("Detailed scores:", detailed_scores)
+        # print("Store scores:", store_scores)
+        # print("Detailed scores:", detailed_scores)
 
         # Calculate average scores
         average_scores = {store: sum(scores) / len(scores) for store, scores in store_scores.items()}
@@ -291,48 +298,27 @@ class CreBasketScreen(Screen):
         recommended_store = min(average_scores, key=average_scores.get)
         recommended_score = average_scores[recommended_store]
 
-        return recommended_store, recommended_score, detailed_scores
-
-        # # Sort the stores based on the score in ascending order (lower is better)
-        # scored_stores.sort(key=lambda x: x['score'])
-        # return scored_stores
+        return recommended_store, recommended_score, detailed_scores, average_scores
 
 
-    def display_price_results(self, recommended_store, detailed_scores):
-        display_texts = [f"Recommended Store: {recommended_store.title()} (Best Average Score)"]
+    def display_price_results(self, recommended_store, recommended_score, detailed_scores, average_scores):
+        recommended_texts = [f"Recommended Store: {recommended_store.title()} (Best Average Score, {recommended_score:.2f})"]
+        display_texts = []
         for store, item in detailed_scores.items():
-            display_texts.append(f"Store: {store.title()}")
+            display_texts.append(f"Store: {store.title()} \n  Average Score: {average_scores[store]:.1f}")
+            keys = list(item.keys())
+            display_texts.append(f"    Distance: {item[keys[0]][0]['distance']: .1f}km")
             for item, details in item.items():
                 for detail in details:
-                    display_texts.append(f"  Item: {item.title()}, Price: {detail['price']:.1f}kr, Distance: {detail['distance']:.1f} km, Score: {detail['score']:.2f}")
+                    display_texts.append(f"    Item: {item.title()}, Price: {detail['price']:.1f}kr, Score: {detail['score']:.2f}")
+            display_texts.append("")  # Add a blank line between stores
 
-
-        print(display_texts)
+        # print(display_texts)
 
         # Store these details for later use in the GUI
-        App.get_running_app().price_check_results = "\n".join(display_texts)
-        App.get_running_app().detailed_store_info = detailed_scores
+        App.get_running_app().price_check_results = str(recommended_texts[0])
+        App.get_running_app().detailed_store_info = "\n".join(display_texts)
         self.manager.current = 'price_results'
-
-
-        # print("Average scores:", average_scores)
-        # display_text = (f"Recommended Store: {recommended_store}\n"
-        #                 f"Average Score: {recommended_score:.1f}\n\n"
-        #                 "Scores by Store:\n" +
-        #                 "\n".join(f"{store}: {score:.1f}" for store, score in average_scores.items()))
-
-        # # Set the result text for the application and switch screens
-        # App.get_running_app().price_check_results = display_text
-        # self.manager.current = 'price_results'
-
-    # def display_price_results(self, scored_stores):
-
-    #     display_texts = [
-    #         f"Item: {store['item']}, Store: {store['store']}, Price: {store['price']}kr, Distance: {store['distance']:.1f} km, Score: {store['score']:.1f}"
-    #         for store in scored_stores
-    #     ]
-    #     App.get_running_app().price_check_results = "\n".join(display_texts)
-    #     self.manager.current = 'price_results'
 
     def show_popup(self, title, message):
         popup = Popup(title=title, content=Label(text=message), size_hint=(None, None), size=(400, 200))
@@ -363,19 +349,12 @@ class CreBasketScreen(Screen):
 class PriceResultsScreen(Screen):
     def show_all_stores(self):
         detailed_info = App.get_running_app().detailed_store_info
-        # Convert detailed_info to a string or update a widget to display it
-        all_stores_text = self.format_all_stores(detailed_info)
-        self.ids.results_label.text = all_stores_text
 
-    def format_all_stores(self, detailed_info):
-        texts = []
-        for store, items in detailed_info.items():
-            texts.append(f"Store: {store}")
-            for item, details in items.items():
-                for detail in details:
-                    texts.append(f"  Item: {item}, Price: {detail['price']}kr, Distance: {detail['distance']:.1f} km, Score: {detail['score']:.1f}")
-        return "\n".join(texts)
-
+        self.ids.results_label.text = detailed_info
+    
+    def refresh_store(self):
+        recommended_store = App.get_running_app().price_check_results
+        self.ids.results_label.text = recommended_store
 
 class WindowManager(ScreenManager):
     pass
@@ -413,24 +392,24 @@ class MyBasketApp(App):
         initial_screen = 'login' if not self.check_user_session() else 'main'
         sm.current = initial_screen
         return sm
-    
+
     def check_user_session(self):
         return True if self.current_user else False
 
     def get_user_id(self):
         """Getter method for the current user's ID."""
         return self.current_user_id
-    
+
     def get_user_receipts(user_id):
         # Get all receipts for the user
-        receipts = db['receipts'].find({"user_id": user_id})
+        receipts = database.db['receipts'].find({"user_id": user_id})
         return list(receipts)
-    
+
     def logout(self):
         print(f"User {self.current_user} logged out.")
         self.current_user = None
         self.current_user_id = None
         self.root.current = 'login'
-    
+
 if __name__ == '__main__':
     MyBasketApp().run()
