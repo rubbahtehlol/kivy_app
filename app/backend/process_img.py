@@ -71,6 +71,8 @@ def rotate_image(cvImage, angle: float):
     newImage = cv2.warpAffine(newImage, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
     return newImage
 
+# https://stackoverflow.com/questions/44752240/how-to-remove-shadow-from-scanned-images-using-opencv
+
 def preprocess_for_ocr(img):
     # Convert the image to grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -107,7 +109,7 @@ def remove_borders(image):
     cnt = cntsSorted[-1]
     x, y, w, h = cv2.boundingRect(cnt)
     crop = image[y:y+h, x:x+w]
-    return (crop)
+    return crop
 
 def deskew_image(image):
     # from PIL import Image
@@ -147,6 +149,8 @@ def save_image(name, img):
 
 def get_text_from_image(img):
     # Use Tesseract to convert the image to text
+    # Language: Norwegian, OCR Engine Mode: 1 (Neural nets LSTM only), 
+    # Page Segmentation Mode: 6 (Assume a single uniform block of text)
     text = pytesseract.image_to_string(img, lang='nor', config='--oem 1 --psm 6')
     return text
 

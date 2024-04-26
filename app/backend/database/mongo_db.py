@@ -25,7 +25,7 @@ class DatabaseOperations:
             "purchase_history": []
         }
         return self.db['user_profiles'].insert_one(profile).inserted_id
-
+    
     def find_lowest_prices_for_basket(self, basket_items):
         receipts = self.db['receipts']
         

@@ -2,6 +2,7 @@ import kivy
 kivy.require('2.3.0')
 
 # Standard library imports
+from bson.objectid import ObjectId
 from collections import defaultdict
 from datetime import datetime, timedelta
 import re
@@ -12,29 +13,13 @@ from kivy.properties import ObjectProperty, StringProperty
 from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 from kivy.uix.screenmanager import Screen, ScreenManager
-# from pymongo import MongoClient, errors
-# from plyer import gps
 
 # Local application imports
 from receipt_generator import generate_fictional_receipts
 from backend.database.mongo_db import DatabaseOperations
 
-# # global variables for MongoDB host (default port is 27017)
-# DOMAIN = 'localhost:'
-# PORT = 27017
-
-# # Connect to MongoDB and target the 'ReceiptSys' database
-# try:
-#     client = MongoClient(host=[str(DOMAIN) + str(PORT)], serverSelectionTimeoutMS=3000)
-#     db = client['receiptsys']  # Specify the 'ReceiptSys' database
-#     print("server version:", client.server_info()["version"])
-# except errors.ServerSelectionTimeoutError as err:
-#     client = None
-#     db = None
-#     print("pymongo ERROR:", err)
-
 # Connect to MongoDB and target the 'ReceiptSys' database
-database = DatabaseOperations()
+database = DatabaseOperations(db_name='receiptsys')
 
 class LoginScreen(Screen):
     def login(self, username, password):
@@ -57,19 +42,19 @@ class LoginScreen(Screen):
             popup.open()
             return
 
-        # Check if the password matches (assuming password checking logic is here)
+        # Check if the password matches
         if user.get("password") == password:
-            # Proceed with successful login logic...
             print(f"User {username} logged in successfully.")
             App.get_running_app().current_user = username  # Set the current user
             App.get_running_app().current_user_id = user["_id"]  # Set the current user ID
             print(f"Current user ID: {App.get_running_app().current_user_id}")
             self.manager.current = 'main'  # Navigate to the main screen
         else:
-            # Password does not match
             popup = Popup(title='Login Error',
                           content=Label(text='Incorrect password.'),
                           size_hint=(None, None), size=(400, 200))
+            popup.open()
+            
 
 class MainScreen(Screen):
     pass
@@ -112,66 +97,10 @@ class NewUser(Screen):
         print(f"Price sensitivity set to: {self.price_sensitivity}")  # For debugging
 
 class NewRecpScreen(Screen):
-    def add_purchase_to_history(self, user_id, receipt_data):
-        # receipt_data should be a dict containing at least 'receipt_id' and 'date'
-        database.db['user_profiles'].update_one(
-            {"user_id": user_id},
-            {"$push": {"purchase_history": receipt_data}})
-        print("Purchase added to history.")
-
-    def generate_and_insert_receipts(self, user_id):
-        if not user_id:
-            popup_content = Label(text="No user is currently logged in. Please log in to generate receipts.")
-            popup = Popup(title="User Not Logged In",
-                          content=popup_content,
-                          size_hint=(None, None), size=(400, 200))
-            popup.open()
-            return
-
-        receipts = generate_fictional_receipts(user_id, 10)  # Generate 10 receipts
-        for receipt in receipts:
-            database.db['receipts'].insert_one(receipt)
-        print("Receipts generated and inserted into the database.")
+    pass
 
 class ViewRecpScreen(Screen):
-        # def on_pre_enter(self, *args):
-        #     # Assuming user_id is accessible as a global or passed around
-        #     user_id = self.get_user_id()
-        #     receipts = App.get_user_receipts(user_id)
-        #     user_profile = db['user_profiles'].find_one({"user_id": user_id})
-        #     if user_profile:
-        #         self.ids.receipts_list.data  = [
-        #         {'text': f"Receipt {idx + 1}", 'on_release': lambda idx=idx: self.open_receipt_popup(receipts[idx])}
-        #         for idx in range(len(receipts))
-        #     ]
-        #     else:
-        #         print("User profile not found.")
-
-        def open_receipt_popup(self, receipt):
-            # content = BoxLayout(orientation='vertical')
-            # for item in receipt['items']:
-            #     content.add_widget(Label(text=f"{item['name']}: ${item['price']}"))
-            # content.add_widget(Button(text="Delete", on_release=lambda x: self.delete_receipt(receipt)))
-            # popup = Popup(title='Receipt Details', content=content, size_hint=(None, None), size=(400, 400))
-            # popup.open()
-
-            # Create and configure the popup content dynamically
-            content = self.manager.get_screen('your_dynamic_popup_screen_name')  # Adjust with your actual dynamic class/screen name
-            content.ids.receipt_items.clear_widgets()  # Clear previous items
-            for item in receipt['items']:
-                # Dynamically add items to the popup
-                content.ids.receipt_items.add_widget(ReceiptItem(text=f"{item['name']}: ${item['price']}"))
-            content.ids.delete_button.bind(on_release=lambda x: self.delete_receipt(receipt))  # Assuming 'delete_button' is an id in your KV
-            popup = Popup(title='Receipt Details', content=content, size_hint=(None, None), size=(400, 400))
-            popup.open()
-
-        def delete_receipt(self, receipt):
-            # Assuming receipt is a dictionary with a unique ID
-            database.db['receipts'].delete_one({"receipt_id": receipt["receipt_id"]})
-            print("Receipt deleted.")
-
-            # Close the popup
-            self.on_pre_enter()  # Refresh the view
+    pass
 
 class CreBasketScreen(Screen):
     user_location = ObjectProperty(None)  # Store user's location as a property
@@ -288,9 +217,6 @@ class CreBasketScreen(Screen):
                     'score': score
                 })
 
-        # print("Store scores:", store_scores)
-        # print("Detailed scores:", detailed_scores)
-
         # Calculate average scores
         average_scores = {store: sum(scores) / len(scores) for store, scores in store_scores.items()}
 
@@ -313,8 +239,6 @@ class CreBasketScreen(Screen):
                     display_texts.append(f"    Item: {item.title()}, Price: {detail['price']:.1f}kr, Score: {detail['score']:.2f}")
             display_texts.append("")  # Add a blank line between stores
 
-        # print(display_texts)
-
         # Store these details for later use in the GUI
         App.get_running_app().price_check_results = str(recommended_texts[0])
         App.get_running_app().detailed_store_info = "\n".join(display_texts)
@@ -323,6 +247,8 @@ class CreBasketScreen(Screen):
     def show_popup(self, title, message):
         popup = Popup(title=title, content=Label(text=message), size_hint=(None, None), size=(400, 200))
         popup.open()
+
+    # https://www.geeksforgeeks.org/program-distance-two-points-earth/
 
     def calculate_distance(self, user_location, store_location):
         from math import radians, cos, sin, sqrt, atan2
@@ -344,8 +270,7 @@ class CreBasketScreen(Screen):
         # Calculate the distance
         distance = R * c
         return distance
-
-
+    
 class PriceResultsScreen(Screen):
     def show_all_stores(self):
         detailed_info = App.get_running_app().detailed_store_info
@@ -356,10 +281,40 @@ class PriceResultsScreen(Screen):
         recommended_store = App.get_running_app().price_check_results
         self.ids.results_label.text = recommended_store
 
-class WindowManager(ScreenManager):
-    pass
+class ViewProfileScreen(Screen):
+    def get_price_sensitivity(self):
+        return self.price_sensitivity
+    
+    def on_pre_enter(self):
+        user_id = App.get_running_app().current_user_id
+        user_profile = database.db['user_profiles'].find_one({'_id': user_id})
+        if user_profile:
+            self.price_sensitivity = user_profile['preferences']['price_sensitivity']
+        else:
+            print("User profile not found.")
+    
+    def on_enter(self):
+        self.ids.username_label.text = f"Username: {App.get_running_app().get_username()}"
+        self.ids.price_sensitivity_label.text = f"Price Sensitivity: {self.price_sensitivity}"
 
-class ReceiptItem(Label):
+class ChangePriceSensScreen(Screen):
+    def set_price_sensitivity(self, sensitivity):
+        self.price_sensitivity = sensitivity
+        print(f"Price sensitivity set to: {self.price_sensitivity}")
+
+    def get_price_sensitivity(self):
+        return self.price_sensitivity
+    
+    def save_price_sensitivity(self):
+        user_id = App.get_running_app().current_user_id
+        price_sensitivity = self.get_price_sensitivity()
+        database.db['user_profiles'].update_one(
+            {'_id': user_id},
+            {'$set': {'preferences.price_sensitivity': price_sensitivity}}
+        )
+        print("Price sensitivity updated.")
+        self.manager.current = 'view_profile'
+class WindowManager(ScreenManager):
     pass
 
 class MyBasketApp(App):
@@ -387,6 +342,8 @@ class MyBasketApp(App):
         sm.add_widget(ViewRecpScreen(name='view_receipts'))
         sm.add_widget(CreBasketScreen(name='create_basket'))
         sm.add_widget(PriceResultsScreen(name='price_results'))
+        sm.add_widget(ViewProfileScreen(name='view_profile'))
+        sm.add_widget(ChangePriceSensScreen(name='change_price_sensitivity'))
 
         # Decide on the initial screen
         initial_screen = 'login' if not self.check_user_session() else 'main'
@@ -397,16 +354,30 @@ class MyBasketApp(App):
         return True if self.current_user else False
 
     def get_user_id(self):
-        """Getter method for the current user's ID."""
         return self.current_user_id
 
     def get_user_receipts(user_id):
         # Get all receipts for the user
         receipts = database.db['receipts'].find({"user_id": user_id})
         return list(receipts)
+    
+    def get_username(self):
+        user_profile = database.db['user_profiles'].find_one({'_id': ObjectId(self.current_user_id)})
+        if user_profile:
+            return user_profile['username']
+        return "Unknown"
+    
+    def get_price_sensitivity(self):
+        user_profile = database.db['user_profiles'].find_one({'_id': ObjectId(self.current_user_id)})
+        if user_profile and 'preferences' in user_profile:
+            return user_profile['preferences'].get('price_sensitivity', 'Not Set')
+        return "Not Set"
 
     def logout(self):
         print(f"User {self.current_user} logged out.")
+        login = self.root.get_screen('login')
+        login.ids.login_username.text = ''
+        login.ids.login_password.text = ''
         self.current_user = None
         self.current_user_id = None
         self.root.current = 'login'
