@@ -13,7 +13,7 @@ def display(im_path):
     dpi = 80
     im_data = plt.imread(im_path)
 
-    height, width, depth  = im_data.shape
+    height, width  = im_data.shape
     
     # What size does the figure need to be in inches to fit the image?
     figsize = width / float(dpi), height / float(dpi)
@@ -112,7 +112,6 @@ def remove_borders(image):
     return crop
 
 def deskew_image(image):
-    # from PIL import Image
     # Coordinates of non-black pixels.
     non_zero_coords = np.column_stack(np.where(image > 0))
 
@@ -133,19 +132,18 @@ def deskew_image(image):
     M = cv2.getRotationMatrix2D(center, rotation_angle_degrees, 1.0)
     rotated = cv2.warpAffine(image, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
 
-    # Convert to PIL Image format to display in the notebook
-    # rotated_pil = Image.fromarray(rotated)
-
-    # Save the deskewed image
-    # deskewed_path = './temp/deskewed_receipt.png'
-    # rotated_pil.save(deskewed_path)
-
     return rotated
 
 def save_image(name, img):
     return cv2.imwrite(name, img)
 
 # cv2.imwrite('preprocessed_img.png', img_new)
+
+def get_text_from_image_plain(img):
+    # Use Tesseract to convert the image to text
+    text = pytesseract.image_to_string(img, lang='nor')
+    return text
+
 
 def get_text_from_image(img):
     # Use Tesseract to convert the image to text
@@ -155,5 +153,5 @@ def get_text_from_image(img):
     return text
 
 def save_raw_text(text, name):
-    with open("backend/data/raw_text/" + name, "w") as file:
+    with open("data/raw_text/" + name, "w") as file:
         file.write(text)
