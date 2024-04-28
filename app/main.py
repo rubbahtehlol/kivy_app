@@ -15,7 +15,6 @@ from kivy.uix.label import Label
 from kivy.uix.screenmanager import Screen, ScreenManager
 
 # Local application imports
-from receipt_generator import generate_fictional_receipts
 from backend.database.mongo_db import DatabaseOperations
 
 # Connect to MongoDB and target the 'ReceiptSys' database
@@ -104,7 +103,7 @@ class ViewRecpScreen(Screen):
 
 class CreBasketScreen(Screen):
     user_location = ObjectProperty(None)  # Store user's location as a property
-    user_location = (62.738904078963586, 7.140731219084178)  # Placeholder for user's location
+    user_location = (62.7333432951364, 7.14822177402025)  # Placeholder for user's location
 
     def check_prices(self, selected_days, basket_items):
         if not self.validate_days(selected_days):
@@ -252,8 +251,6 @@ class CreBasketScreen(Screen):
 
     def calculate_distance(self, user_location, store_location):
         from math import radians, cos, sin, sqrt, atan2
-        # Earth's radius in kilometers
-        R = 6371.0
 
         # Convert latitude and longitude from degrees to radians
         lat1, lon1 = map(radians, user_location)
@@ -267,6 +264,9 @@ class CreBasketScreen(Screen):
         a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
         c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
+        # Earth's radius in kilometers
+        R = 6371.0
+
         # Calculate the distance
         distance = R * c
         return distance
@@ -274,6 +274,7 @@ class CreBasketScreen(Screen):
 class PriceResultsScreen(Screen):
     def show_all_stores(self):
         detailed_info = App.get_running_app().detailed_store_info
+        print(detailed_info)
 
         self.ids.results_label.text = detailed_info
     
