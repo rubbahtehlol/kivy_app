@@ -202,9 +202,6 @@ WindowManager:
         spacing: 10
         padding: 10
         Button:
-            text: "Generate Receipts"
-            on_release: root.generate_and_insert_receipts(app.get_user_id())
-        Button:
             text: "Back"
             on_release:
                 app.root.current = "main"
@@ -212,20 +209,10 @@ WindowManager:
 
 <ViewRecpScreen>:
     name: "view_receipts"
-    BoxLayout:
-        orientation: 'vertical'
-        RecycleView:
-            id: receipts_list
-            viewclass: 'Button'
-            RecycleBoxLayout:
-                orientation: 'vertical'
-                size_hint_y: None
-                height: self.minimum_height
-                default_size: None, dp(56)
-                default_size_hint: 1, None
-        # Label:
-        #     id: previous_receipts
-        #     text: app.get_user_receipts(app.get_user_id())
+    GridLayout:
+        cols: 1
+        spacing: 10
+        padding: 10
         Button:
             text: "Back"
             on_release:

@@ -9,10 +9,12 @@ import re
 
 # Third party imports
 from kivy.app import App
+from kivy.logger import Logger
 from kivy.properties import ObjectProperty, StringProperty
 from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 from kivy.uix.screenmanager import Screen, ScreenManager
+import logging
 
 # Local application imports
 from backend.database.mongo_db import DatabaseOperations
@@ -20,40 +22,31 @@ from backend.database.mongo_db import DatabaseOperations
 # Connect to MongoDB and target the 'ReceiptSys' database
 database = DatabaseOperations(db_name='receiptsys')
 
+# Set the logging level for pymongo to WARNING
+logging.getLogger('pymongo').setLevel(logging.WARNING)
+Logger.setLevel(logging.INFO)
+
 class LoginScreen(Screen):
+    def show_error_popup(self, message):
+        popup = Popup(title='Login Error',
+                      content=Label(text=message),
+                      size_hint=(None, None), size=(400, 200))
+        popup.open()
+
     def login(self, username, password):
-        # Check if the username field is empty
         if not username:
-            popup = Popup(title='Login Error',
-                          content=Label(text='Username cannot be empty.'),
-                          size_hint=(None, None), size=(400, 200))
-            popup.open()
+            self.show_error_popup('Username cannot be empty.')
             return
 
-        # Attempt to find the user in the database
         user = database.db['user_profiles'].find_one({"username": username})
 
-        # Check if the user does not exist
         if not user:
-            popup = Popup(title='Login Error',
-                          content=Label(text='Username does not exist.'),
-                          size_hint=(None, None), size=(400, 200))
-            popup.open()
+            self.show_error_popup('Username does not exist.')
             return
 
-        # Check if the password matches
-        if user.get("password") == password:
-            print(f"User {username} logged in successfully.")
-            App.get_running_app().current_user = username  # Set the current user
-            App.get_running_app().current_user_id = user["_id"]  # Set the current user ID
-            print(f"Current user ID: {App.get_running_app().current_user_id}")
-            self.manager.current = 'main'  # Navigate to the main screen
-        else:
-            popup = Popup(title='Login Error',
-                          content=Label(text='Incorrect password.'),
-                          size_hint=(None, None), size=(400, 200))
-            popup.open()
-            
+        if user.get("password") != password:
+            self.show_error_popup('Incorrect password.')
+            return          
 
 class MainScreen(Screen):
     pass
@@ -103,7 +96,7 @@ class ViewRecpScreen(Screen):
 
 class CreBasketScreen(Screen):
     user_location = ObjectProperty(None)  # Store user's location as a property
-    user_location = (62.7333432951364, 7.14822177402025)  # Placeholder for user's location
+    user_location = (62.73877287906317, 7.1406954451815)  # Placeholder for user's location
 
     def check_prices(self, selected_days, basket_items):
         if not self.validate_days(selected_days):
@@ -357,10 +350,10 @@ class MyBasketApp(App):
     def get_user_id(self):
         return self.current_user_id
 
-    def get_user_receipts(user_id):
-        # Get all receipts for the user
-        receipts = database.db['receipts'].find({"user_id": user_id})
-        return list(receipts)
+    # def get_user_receipts(user_id):
+    #     # Get all receipts for the user
+    #     receipts = database.db['receipts'].find({"user_id": user_id})
+    #     return list(receipts)
     
     def get_username(self):
         user_profile = database.db['user_profiles'].find_one({'_id': ObjectId(self.current_user_id)})
