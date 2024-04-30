@@ -19,12 +19,12 @@ import logging
 # Local application imports
 from backend.database.mongo_db import DatabaseOperations
 
-# Connect to MongoDB and target the 'ReceiptSys' database
-database = DatabaseOperations(db_name='receiptsys')
-
 # Set the logging level for pymongo to WARNING
 logging.getLogger('pymongo').setLevel(logging.WARNING)
 Logger.setLevel(logging.INFO)
+
+# Connect to MongoDB and target the 'ReceiptSys' database
+database = DatabaseOperations(db_name='receiptsys')
 
 class LoginScreen(Screen):
     def show_error_popup(self, message):
@@ -46,7 +46,12 @@ class LoginScreen(Screen):
 
         if user.get("password") != password:
             self.show_error_popup('Incorrect password.')
-            return          
+            return
+        
+        else:
+            App.get_running_app().current_user = username
+            App.get_running_app().current_user_id = user.get('_id')
+            self.manager.current = 'main'          
 
 class MainScreen(Screen):
     pass
@@ -267,8 +272,6 @@ class CreBasketScreen(Screen):
 class PriceResultsScreen(Screen):
     def show_all_stores(self):
         detailed_info = App.get_running_app().detailed_store_info
-        print(detailed_info)
-
         self.ids.results_label.text = detailed_info
     
     def refresh_store(self):
