@@ -159,7 +159,6 @@ class PriceResultsScreen(Screen):
 
 class ViewProfileScreen(Screen):
     # Fetch the user's price sensitivity from the database
-    # on_pre_enter is used to ensure the data is fetched before the screen is entered
     def on_pre_enter(self):
         user_id = App.get_running_app().current_user_id
         user_profile = database.find_one('user_profiles', {'_id': user_id})
@@ -169,7 +168,6 @@ class ViewProfileScreen(Screen):
             print("User profile not found.")
     
     # Display the user's username and price sensitivity
-    # on_enter is used to ensure the data is displayed when the screen is entered
     def on_enter(self):
         self.ids.username_label.text = f"Username: {App.get_running_app().get_username()}"
         self.ids.price_sensitivity_label.text = f"Price Sensitivity: {self.price_sensitivity}"
