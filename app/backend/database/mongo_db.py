@@ -51,11 +51,17 @@ class DatabaseOperations:
             results.append(self.query_grocery_prices(item.upper(), days_back))
         return results
     
+    # Query the database for grocery prices
     def query_grocery_prices(self, item_name, days_back):
         groceries = self.db['groceries']
 
+        # Calculate the start date based on the number of days back
         start_date = (datetime.now() - timedelta(days=days_back)).strftime("%d.%m.%Y %H:%M") if days_back else None
+        
+        # Query to find the item by name and optionally filter by date
         query = {"name": item_name, "price_history.date": {"$gte": start_date}} if start_date else {"name": item_name}
+        
+        # Pipeline to unwind the price history, sort by store and date, group by store and item name
         pipeline = [
             {'$match': query},
             {'$unwind': '$price_history'},
@@ -71,10 +77,14 @@ class DatabaseOperations:
                 'stores': {'$push': {'store': '$_id', 'date': '$latestDate', 'price': '$minPrice'}}
             }}
         ]
+
+        # Execute the aggregation pipeline and return the result
         result = list(groceries.aggregate(pipeline))
         return result[0] if result else {'_id': item_name, 'stores': []}
     
+    # Fetch store distances and calculate store scores
     def fetch_store_distances(self, user_location, prices):
+        # Extract the store names from the prices
         involved_stores = {store['store'].lower() for price_info in prices for store in price_info['stores']}
 
         if not involved_stores:
@@ -88,6 +98,7 @@ class DatabaseOperations:
         # Calculate distances using names directly from store_data
         distances = {}
         for store_name, store_info in store_data.items():
+            # Check if location data is available
             if 'location' in store_info and 'coordinates' in store_info['location']:
                 store_location = store_info['location']['coordinates']
                 distances[store_name] = self.calculate_distance(user_location, store_location)
@@ -97,11 +108,10 @@ class DatabaseOperations:
 
         return distances
     
+    # Calculate store scores based on prices, distances, and price sensitivity
     def calculate_store_scores(self, prices, distances, price_sensitivity):
-        # Log the distances to verify their availability
-        print("Distances available:", distances)
 
-        # Sensitivity weights as defined
+        # Sensitivity weights
         sensitivity_weights = {'High':      {'price': 0.7, 'distance': 0.3},
                                'Medium':    {'price': 0.5, 'distance': 0.5},
                                'Low':       {'price': 0.3, 'distance': 0.7}

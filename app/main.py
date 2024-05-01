@@ -93,9 +93,6 @@ class ViewRecpScreen(Screen):
     pass
 
 class CreBasketScreen(Screen):
-    user_location = ObjectProperty(None)  # Store user's location as a property
-    user_location = (62.73877287906317, 7.1406954451815)  # Placeholder for user's location
-
     def check_prices(self, selected_days, basket_items):
         if not self.validate_days(selected_days):
             return
@@ -108,8 +105,11 @@ class CreBasketScreen(Screen):
 
         # Fetch the lowest prices for the basket items
         prices = database.find_lowest_prices_for_basket(basket_items, days_back)
+
         # Fetch store distances
-        store_distances = database.fetch_store_distances(self.user_location, prices)
+        user_location = App.get_running_app().current_user_location
+        store_distances = database.fetch_store_distances(user_location, prices)
+
         # If no store with prices is found, show an error popup
         if not store_distances:
             App.get_running_app().show_error_popup('Error', 'No store found.')
@@ -139,7 +139,7 @@ class CreBasketScreen(Screen):
             for item, details in item.items():
                 for detail in details:
                     display_texts.append(f"    Item: {item.title()}, Price: {detail['price']:.1f}kr, Score: {detail['score']:.2f}")
-            display_texts.append("")  # Add a blank line between stores
+            display_texts.append("")
 
         # Store these details for later use in the GUI
         App.get_running_app().price_check_results = str(recommended_texts[0])
@@ -195,9 +195,11 @@ class WindowManager(ScreenManager):
 class MyBasketApp(App):
     current_user = None  # Global variable to keep track of the current user
     current_user_id = None  # Global variable to keep track of the current user's ID
+    current_user_location = ObjectProperty((62.73877287906317, 7.1406954451815))  # Store user's location as a property
     price_check_results = StringProperty("")  # Property to hold the price check results
     detailed_store_info = ObjectProperty(None)  # Property to hold detailed store information
 
+    # Build the app with all the screens
     def build(self):
         self.title = 'My Basket App'
         sm = ScreenManager()
@@ -238,6 +240,7 @@ class MyBasketApp(App):
             return user_profile['preferences'].get('price_sensitivity', 'Not Set')
         return "Not Set"
     
+    # Display an error popup
     def show_error_popup(self, title, message):
         popup = Popup(title=title, 
                       content=Label(text=message), 
@@ -245,6 +248,9 @@ class MyBasketApp(App):
                       size=(400, 200))
         popup.open()
 
+    # Log out the current user and redirect to the login screen
+    # Changes the current user and user ID to None
+    # Clears the username and password fields in the login screen
     def logout(self):
         print(f"User {self.current_user} logged out.")
         login = self.root.get_screen('login')
